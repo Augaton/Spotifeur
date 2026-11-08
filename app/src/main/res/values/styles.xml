@@ -1,0 +1,7 @@
+<resources>
+    <string name="app_name" translatable="false">Spotifeur</string>
+    <style name="Theme.Spotifeur" parent="android:style/Theme.Material.NoActionBar">
+        <item name="android:windowBackground">#15131B</item>
+        <item name="android:windowLightStatusBar">false</item>
+    </style>
+</resources>

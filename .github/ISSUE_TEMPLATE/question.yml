@@ -1,0 +1,19 @@
+name: Question
+description: Ask a question about using or building Spotifeur
+title: "[Question]: "
+labels: ["question"]
+body:
+  - type: textarea
+    id: question
+    attributes:
+      label: Question
+    validations:
+      required: true
+
+  - type: textarea
+    id: context
+    attributes:
+      label: Context
+      description: Android version, device, Spotifeur version, what you already tried.
+    validations:
+      required: false

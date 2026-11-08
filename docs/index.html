@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Spotifeur: an open-source Spotify client for Android, music only</title>
+    <meta name="description" content="Spotifeur is a free, open-source Spotify client for Android. It plays your Spotify library with Spotify's own protocols and audio engine, without podcasts, videos or Canvas, and with more settings than the official app.">
+    <meta name="keywords" content="Spotify client, Android, open source, Spotify without podcasts, Spotify alternative app, Material 3, music player, Spotify offline, Jetpack Compose">
+    <meta name="robots" content="index, follow, max-image-preview:large">
+    <meta name="theme-color" content="#0b0b0b">
+    <link rel="canonical" href="https://jean-voila.github.io/Spotifeur/">
+
+    <meta property="og:type" content="website">
+    <meta property="og:site_name" content="Spotifeur">
+    <meta property="og:url" content="https://jean-voila.github.io/Spotifeur/">
+    <meta property="og:title" content="Spotifeur: an open-source Spotify client for Android">
+    <meta property="og:description" content="Your Spotify library in an Android app that only does music: no podcasts, videos or Canvas. Free and open source.">
+    <meta property="og:image" content="https://jean-voila.github.io/Spotifeur/assets/img/screens/player.jpg">
+    <meta property="og:locale" content="en_US">
+
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="Spotifeur: an open-source Spotify client for Android">
+    <meta name="twitter:description" content="Your Spotify library in an Android app that only does music: no podcasts, videos or Canvas. Free and open source.">
+    <meta name="twitter:image" content="https://jean-voila.github.io/Spotifeur/assets/img/screens/player.jpg">
+
+    <script type="application/ld+json">
+    [{
+        "@context": "https://schema.org",
+        "@type": "SoftwareApplication",
+        "name": "Spotifeur",
+        "operatingSystem": "Android 8.0 or later (ARM64)",
+        "applicationCategory": "MultimediaApplication",
+        "description": "Free, open-source Spotify client for Android. It plays your Spotify library with Spotify's own Android protocols and audio engine, without podcasts, videos or Canvas.",
+        "license": "https://www.gnu.org/licenses/gpl-3.0.html",
+        "isAccessibleForFree": true,
+        "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
+        "url": "https://jean-voila.github.io/Spotifeur/",
+        "codeRepository": "https://github.com/jean-voila/Spotifeur",
+        "screenshot": "https://jean-voila.github.io/Spotifeur/assets/img/screens/player.jpg",
+        "author": { "@type": "Person", "name": "jean-voila", "url": "https://github.com/jean-voila" }
+    }, {
+        "@context": "https://schema.org",
+        "@type": "FAQPage",
+        "mainEntity": [
+            { "@type": "Question", "name": "Do I need a Spotify account?", "acceptedAnswer": { "@type": "Answer", "text": "Yes. Spotifeur is a client for your Spotify account. It shows your library and plays what your account is allowed to play. It was tested with a Premium account." } },
+            { "@type": "Question", "name": "Do I need the official Spotify app installed?", "acceptedAnswer": { "@type": "Answer", "text": "No. At build time you supply the official Spotify APKM, version 9.2.0.26, and Spotify's audio engine is packaged inside Spotifeur." } },
+            { "@type": "Question", "name": "Why is there no APK to download?", "acceptedAnswer": { "@type": "Answer", "text": "The audio engine is Spotify's code. It cannot be redistributed, so you build Spotifeur yourself with your own copy of the official APKM." } },
+            { "@type": "Question", "name": "Are changes synced with the official Spotify app?", "acceptedAnswer": { "@type": "Answer", "text": "Yes. Saved tracks, albums, followed artists and playlists use the same services as the official app." } },
+            { "@type": "Question", "name": "Can my account be banned?", "acceptedAnswer": { "@type": "Answer", "text": "Spotify's terms of service do not allow unofficial clients, and Spotify could restrict an account that uses one. Use it at your own risk." } }
+        ]
+    }]
+    </script>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="assets/site.css">
+</head>
+<body>
+    <div class="bg" aria-hidden="true"></div>
+
+    <header class="hero">
+        <!-- Logo: to be added. -->
+        <h1>Spotifeur</h1>
+        <p class="lead">An open-source Spotify client for Android, for music only.</p>
+        <p class="intro">Spotifeur signs in to your Spotify account and plays your library with Spotify's own Android protocols and audio engine. It has no podcasts, videos or Canvas loops, a Material 3 Expressive interface, and more settings than the official app.</p>
+        <div class="actions">
+            <a class="button primary" href="https://github.com/jean-voila/Spotifeur#build-from-source">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 20h14v-2H5v2zm7-18-5.5 5.5 1.42 1.42L11 5.83V16h2V5.83l3.08 3.09 1.42-1.42L12 2z" transform="rotate(180 12 12)"/></svg>
+                <span>Build from source</span>
+            </a>
+            <a class="button" href="https://github.com/jean-voila/Spotifeur">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 .5a12 12 0 0 0-3.8 23.4c.6.1.8-.3.8-.6v-2.1c-3.3.7-4-1.6-4-1.6-.6-1.4-1.4-1.8-1.4-1.8-1.1-.7.1-.7.1-.7 1.2.1 1.8 1.2 1.8 1.2 1.1 1.8 2.8 1.3 3.5 1 .1-.8.4-1.3.8-1.6-2.7-.3-5.5-1.3-5.5-5.9 0-1.3.5-2.4 1.2-3.2-.1-.3-.5-1.5.1-3.2 0 0 1-.3 3.3 1.2a11.5 11.5 0 0 1 6 0C17.3 4.7 18.3 5 18.3 5c.6 1.7.2 2.9.1 3.2.8.8 1.2 1.9 1.2 3.2 0 4.6-2.8 5.6-5.5 5.9.4.4.8 1.1.8 2.2v3.3c0 .3.2.7.8.6A12 12 0 0 0 12 .5z"/></svg>
+                <span>Source code</span>
+            </a>
+            <a class="button" href="https://github.com/jean-voila/Spotifeur/tree/main/protocol">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 2h9l5 5v15H6V2zm8 1.5V8h4.5L14 3.5zM8 12h8v1.5H8V12zm0 3.5h8V17H8v-1.5z"/></svg>
+                <span>Protocol notes</span>
+            </a>
+        </div>
+        <nav class="links" aria-label="Project links">
+            <a href="#compare">Compared with Spotify</a>
+            <a href="#features">Features</a>
+            <a href="#safety">Safety</a>
+            <a href="#faq">FAQ</a>
+            <a href="https://github.com/jean-voila/Spotifeur/blob/main/docs/PRIVACY.md">Privacy</a>
+            <a href="https://github.com/jean-voila/Spotifeur/issues">Issues</a>
+            <a href="https://github.com/sponsors/jean-voila">Sponsor</a>
+            <a href="https://buymeacoffee.com/jean_voila">Buy me a coffee</a>
+        </nav>
+    </header>
+
+    <main>
+        <section class="screens" aria-label="Screenshots">
+            <!-- To be replaced by the mockups. -->
+            <figure><img src="assets/img/screens/home.jpg" width="537" height="1200" loading="lazy" alt="Spotifeur home screen with pinned items, downloads, liked songs and playlists"><figcaption>Home</figcaption></figure>
+            <figure><img src="assets/img/screens/player.jpg" width="537" height="1200" loading="lazy" alt="Spotifeur player playing GLUCKSMANN LOVE by Wailtoad"><figcaption>Player</figcaption></figure>
+            <figure><img src="assets/img/screens/lyrics.jpg" width="537" height="1200" loading="lazy" alt="Spotifeur synced lyrics screen"><figcaption>Lyrics</figcaption></figure>
+            <figure><img src="assets/img/screens/queue.jpg" width="537" height="1200" loading="lazy" alt="Spotifeur queue with tracks from The Dark Side of the Moon"><figcaption>Queue</figcaption></figure>
+            <figure><img src="assets/img/screens/album.jpg" width="537" height="1200" loading="lazy" alt="Spotifeur album page for The Dark Side of the Moon by Pink Floyd"><figcaption>Album</figcaption></figure>
+            <figure><img src="assets/img/screens/playlist.jpg" width="537" height="1200" loading="lazy" alt="Spotifeur playlist page"><figcaption>Playlist</figcaption></figure>
+            <figure><img src="assets/img/screens/create.jpg" width="537" height="1200" loading="lazy" alt="Spotifeur new playlist dialog with account or device choice and cover"><figcaption>New playlist</figcaption></figure>
+            <figure><img src="assets/img/screens/settings.jpg" width="537" height="1200" loading="lazy" alt="Spotifeur settings categories"><figcaption>Settings</figcaption></figure>
+            <figure><img src="assets/img/screens/appearance.jpg" width="537" height="1200" loading="lazy" alt="Spotifeur appearance settings"><figcaption>Appearance</figcaption></figure>
+        </section>
+
+        <section id="compare">
+            <h2>Compared with the official app</h2>
+            <p class="section-intro">Spotifeur uses the same services as the official Android app. What you save, follow or edit in one shows up in the other.</p>
+            <div class="table-wrap">
+                <table>
+                    <thead><tr><th scope="col"></th><th scope="col">Official app</th><th scope="col">Spotifeur</th></tr></thead>
+                    <tbody>
+                        <tr><th scope="row">Library, playlists, saved tracks, albums, artists</th><td>Yes</td><td>Yes, same account</td></tr>
+                        <tr><th scope="row">Full-length playback, seek, queue, shuffle, repeat</th><td>Yes</td><td>Yes, with Spotify's audio engine</td></tr>
+                        <tr><th scope="row">Search, radios, synced lyrics</th><td>Yes</td><td>Yes</td></tr>
+                        <tr><th scope="row">Create and edit playlists, custom covers</th><td>Yes</td><td>Yes</td></tr>
+                        <tr><th scope="row">Offline downloads and cache</th><td>Yes</td><td>Yes, cache size and prefetch depth adjustable</td></tr>
+                        <tr><th scope="row">Podcasts, audiobooks, videos</th><td>Yes</td><td class="no">No</td></tr>
+                        <tr><th scope="row">Canvas loops, promoted content</th><td>Yes</td><td class="no">No</td></tr>
+                        <tr><th scope="row">Themes, player style, navigation bar, equalizer, gestures</th><td>Few options</td><td>Many options</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <section id="features">
+            <h2>Features</h2>
+            <div class="grid">
+                <article class="card"><h3>Home and library</h3><p>Pinned items first, then your playlists, albums, artists and saved tracks. Pins stay on the device.</p></article>
+                <article class="card"><h3>Player</h3><p>Seek bar, queue, shuffle, repeat, sleep timer, and the codec and bitrate of the current track if you want them.</p></article>
+                <article class="card"><h3>Lyrics</h3><p>Synced lyrics from Spotify, with an immersive mode. When Spotify has none, Spotifeur can look them up on LRCLIB.</p></article>
+                <article class="card"><h3>Queue</h3><p>Reorder by dragging, swipe to remove, optional history of played tracks.</p></article>
+                <article class="card"><h3>Playlists</h3><p>Create a playlist on your account or on the device, rename it, set a cover from your photos, publish it on your profile, add Spotify's recommendations.</p></article>
+                <article class="card"><h3>Albums, artists, radios</h3><p>Album and artist pages, related artists, and radios from a track, an album, an artist or a playlist.</p></article>
+                <article class="card"><h3>Offline</h3><p>Download albums, playlists or tracks. Recent and upcoming tracks are kept in an encrypted cache of 512 MB to 32 GB, up to 20 tracks ahead.</p></article>
+                <article class="card"><h3>Background playback</h3><p>Media notification, lock screen and Bluetooth controls, resume when headphones reconnect.</p></article>
+                <article class="card"><h3>Equalizer</h3><p>Presets, custom presets, bass boost, virtualizer and loudness.</p></article>
+                <article class="card"><h3>Appearance</h3><p>Light or dark theme, colors from the album art, floating or full-width navigation bar, collage patterns, blur on or off, English or French.</p></article>
+            </div>
+        </section>
+
+        <section id="how">
+            <h2>How it works</h2>
+            <div class="grid three">
+                <article class="card"><h3>Sign-in</h3><p>Login5 and ClientToken, as in the official Android app. You sign in with a code sent to your email address. The session is encrypted with Android Keystore.</p></article>
+                <article class="card"><h3>Library and catalog</h3><p>Playlist4, Collection v2, Extended Metadata and Spotify's search service. No public Web API, no App Remote, no WebView.</p></article>
+                <article class="card"><h3>Audio</h3><p>HLS manifests processed by Spotify's own native engine, loaded unchanged from the official APK that you supply when you build.</p></article>
+            </div>
+            <p class="section-intro">Everything learned along the way is written up in the <a href="https://github.com/jean-voila/Spotifeur/tree/main/protocol">protocol notes</a>, which can be read without the code.</p>
+        </section>
+
+        <section id="safety">
+            <h2>Safety</h2>
+            <div class="grid">
+                <article class="card"><h3>No server, no tracking</h3><p>The app talks to Spotify, and to LRCLIB for lyrics Spotify does not have (title, artist, album and duration only).</p></article>
+                <article class="card"><h3>No stored password</h3><p>The email-code sign-in does not use a password. The session credential stays on the device, encrypted.</p></article>
+                <article class="card"><h3>Built by you</h3><p>You build the APK from the source and your own copy of the official Spotify APK. The build checks its hashes.</p></article>
+                <article class="card"><h3>Unofficial</h3><p>Spotifeur is not affiliated with Spotify. Using a third-party client may break Spotify's terms of service. Use it at your own risk.</p></article>
+            </div>
+        </section>
+
+        <section id="faq">
+            <h2>FAQ</h2>
+            <div class="faq">
+                <details><summary>Do I need a Spotify account?</summary><p>Yes. Spotifeur shows your library and plays what your account is allowed to play. It was tested with a Premium account; free accounts were not tested.</p></details>
+                <details><summary>Do I need the official Spotify app installed?</summary><p>No. At build time you supply the official APKM, version 9.2.0.26, and Spotify's audio engine is packaged inside Spotifeur.</p></details>
+                <details><summary>Why is there no APK to download?</summary><p>The audio engine is Spotify's code and cannot be redistributed. You build Spotifeur yourself with your own copy of the APKM.</p></details>
+                <details><summary>Which devices are supported?</summary><p>ARM64 phones and tablets with Android 8.0 or later. The engine does not run on x86 emulators or 32-bit devices.</p></details>
+                <details><summary>Are my changes synced with the official app?</summary><p>Yes, for saved tracks, albums, followed artists and playlists. Pins stay on the device.</p></details>
+                <details><summary>Can it save MP3 files or unlock Premium?</summary><p>No. Downloads stay encrypted and are only processed by Spotify's engine at playback time. Nothing your account does not have is unlocked.</p></details>
+            </div>
+        </section>
+    </main>
+
+    <footer>
+        <p>Spotifeur is free software under the <a href="https://github.com/jean-voila/Spotifeur/blob/main/LICENSE">GPL-3.0</a>. The interface is derived from <a href="https://github.com/PixelPlayerHQ/PixelPlayer">PixelPlayer</a>.</p>
+        <p>Spotify is a trademark of Spotify AB. This project is not affiliated with Spotify.</p>
+        <p>Made by <a href="https://github.com/jean-voila">jean-voila</a>.</p>
+    </footer>
+</body>
+</html>

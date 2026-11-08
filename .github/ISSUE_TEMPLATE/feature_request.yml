@@ -1,0 +1,48 @@
+name: Feature request
+description: Suggest an improvement
+title: "[Feature]: "
+labels: ["enhancement", "needs triage"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: What problem would this solve?
+    validations:
+      required: true
+
+  - type: textarea
+    id: solution
+    attributes:
+      label: Proposed solution
+      description: What should Spotifeur do? If the official Spotify app has this feature, describe how it behaves there.
+    validations:
+      required: true
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - Library / home
+        - Playback / queue
+        - Playlists
+        - Lyrics
+        - Offline / downloads
+        - Settings / appearance
+        - Protocol documentation
+        - Build / CI
+        - Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+    validations:
+      required: false
+
+  - type: markdown
+    attributes:
+      value: |
+        Out of scope: podcasts, video, Canvas, and anything that bypasses Premium restrictions.

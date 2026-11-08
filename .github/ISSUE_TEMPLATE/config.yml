@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Security policy
+    url: https://github.com/jean-voila/Spotifeur/blob/main/SECURITY.md
+    about: Report security issues privately. Do not post tokens or account details in public issues.
+  - name: Protocol notes
+    url: https://github.com/jean-voila/Spotifeur/tree/main/protocol
+    about: Read the documentation of Spotify's Android protocols before asking about them.

@@ -1,0 +1,139 @@
+# Catalog: metadata, search, images, lyrics and radio
+
+## Extended Metadata
+
+Entities are hydrated in batches. The native library prepares three routes in the procedure at `0xcc574c` (`ADRP` at `0xcc6248`, `0xcc6318` and `0xcc6614`):
+
+```text
+POST spclient/extended-metadata/v0/extended-metadata
+POST spclient/extended-metadata/v3/extensions/batch-get
+GET  spclient/extended-metadata/v3/configs/get-all
+```
+
+v0 is enough for everything below.
+
+### Request: `BatchedEntityRequest`
+
+Descriptor `extended_metadata.proto` `[0x66df3c, 0x66e52d)`.
+
+| Field | Content |
+| --- | --- |
+| 1 `header` | Optional: country, catalogue |
+| 2 `entity_request[]` | 1 `entity_uri`, 2 `query[]` |
+
+Each `ExtensionQuery` has 1 `extension_kind` (enum) and 2 `etag`.
+
+### Response: `BatchedExtensionResponse`
+
+| Path | Content |
+| --- | --- |
+| 2 `extended_metadata[]` | One array per extension kind |
+| 2 → 1 | Array header; field 1 = provider status (0 or 200 when fine) |
+| 2 → 3 `extension_data[]` | Per entity |
+| 2 → 3 → 1 | Entity header; field 1 = status. The header also carries a cache TTL and an offline TTL. |
+| 2 → 3 → 2 | `entity_uri` |
+| 2 → 3 → 3 | `google.protobuf.Any`; field 2 = the serialized extension |
+
+Skip arrays or entities whose status is neither 0 nor 200.
+
+### Extension kinds used
+
+| Kind | Extension | Payload |
+| --- | --- | --- |
+| 5 | `AUDIO_FILES` | `AudioFilesExtensionResponse`, see [07-audio-delivery.md](07-audio-delivery.md) |
+| 8 | Artist | `metadata.Artist` |
+| 9 | Album | `metadata.Album` |
+| 10 | Track | `metadata.Track` |
+
+### `metadata.proto`
+
+Descriptor `[0x6713c0, 0x6737f4)`. Integers such as duration and year are `sint32` (ZigZag).
+
+**Track:** 1 `gid` (16 bytes), 2 `name`, 3 `album`, 4 `artist[]` (2 = name), 7 `duration` ms, 11 `restriction[]`, 12 `file[]`, 13 `alternative[]`, 15 `preview[]`, 19 `availability`, 24 `original_audio`, 41 `audio_formats`.
+
+**Album:** 1 `gid`, 2 `name`, 3 `artist[]`, 6 `date` (1 = year), 9 `cover[]`, 11 `disc[]` (3 = `track[]`, each with 1 = gid), 17 `cover_group` (1 = `image[]`).
+
+**Artist:** 1 `gid`, 2 `name`, 4 `top_track[]` (1 = country code, 2 = `track[]`), 5–8 album groups (album, single, compilation, appears on; each group has 1 = `album[]`), 11 `portrait[]`, 12 `biography[]` (1 = text), 15 `related[]`, 17 `portrait_group` (1 = `image[]`).
+
+**Image:** 1 `file_id` (20 bytes), 2 `size`, 3 `width`, 4 `height`.
+
+GIDs become URIs with base-62: 16 bytes → 22 characters (`spotify:track:…`).
+
+### Unavailable releases
+
+Playlists can keep a release that is no longer playable. Its Track metadata then has no `file` (field 12) and lists one or more `alternative` tracks (field 13). Play the first alternative that has files, and keep the original URI for display and queue identity. No search by name is needed: Spotify names the replacement. **Live:** some old remastered tracks returned HTTP 403 for audio until the alternative was followed.
+
+### Related projections
+
+`spotify.cosmos_util.proto.ArtistMetadata` (`0x639560`: link, name, portraits) and `AlbumMetadata` (`0x63931c`: artists, link, name, covers, year) exist for Cosmos views. The collection artist view goes through `CollectionService/StreamArtistView` (`p.r5h.d` in `classes.dex`, descriptor `collection_get_artist_view_request.proto` `[0x5aa764, 0x5aaa81)`). Where editorial artist sections come from was not established.
+
+## Images
+
+```text
+https://i.scdn.co/image/{image_id_hex}
+https://mosaic.scdn.co/640/{id1}{id2}{id3}{id4}
+```
+
+An image ID is 20 bytes, so 40 hex characters. The first 8 characters are a family and the next 8 a size:
+
+| Family | Largest | Smaller sizes |
+| --- | --- | --- |
+| `ab67616d` (album covers) | `0000b273` | `00004851`, `00001e02` |
+| `ab676161` (artist portraits) | `0000e5eb` | `0000f178`, `00005174` |
+
+Replacing a smaller size with the largest under the same hash gives the full-size image. A playlist without its own picture uses a mosaic of the covers of its first four distinct albums, or the first cover when there are fewer than four.
+
+## Search
+
+```text
+GET spclient/searchview/v3/search
+    ?query={text}
+    &locale={BCP 47}
+    &entity_types=album,artist,playlist,track
+    &limit=20
+    &page_token={token or empty}
+    &album_states=live,prerelease
+    &request_id={UUID}
+    &timestamp={ms}
+Accept: application/protobuf
+```
+
+Static: `p.rd51.a/d` (`classes11.dex`), called from `p.vi11.Q +0x33` and `p.vi11.R +0x4e` (`classes7.dex`). `p.g370.b` (`classes2.dex`) maps the annotations `Lp/ay30;`, `Lp/wyq0;` and `Lp/yyq0;` to GET, POST and PUT.
+
+`MainViewResponse` field 1 is `hits[]`. Each `Entity` has 1 `uri`, 2 `name`, 3 image URI, then a projection by type: 5 track (4 = artists, each with 2 = name; 14 = track type, where 3 and 4 are video entries; 18 → 1 = duration in seconds), 6 album (1 = artist names), 7 playlist (5 = owner name). Field 4 of the response is the next page token; pass it back as `page_token`.
+
+Related routes: `GET searchview/v3/native`, `GET searchview/v3/autocomplete` (`p.rd51.c/e`). Typed autocomplete (`p.kea1.a` via `p.m021.l +0x62`) sends `query`, `locale`, comma-separated `entity_types`, `limit`, `request_id` and `timestamp`.
+
+## Other annotated routes
+
+| Route | Interface |
+| --- | --- |
+| `GET track-entity-view/v2/track/{id}` | `p.rm30.a` (`classes11.dex`); a Cosmos variant `hm://track-entity-view/v2/track/` also exists |
+| `GET creatorabout/v0/artist/{artistId}/about` | `p.gxn.a/b` (`classes5.dex`) |
+| `GET playlist/v2/resolve-uri/{uri}` | `p.dss0.a` (`classes2.dex`) |
+
+## Lyrics
+
+```text
+GET spclient/color-lyrics/v2/track/{track_id}?format=json&vocalRemoval=false&market=from_token
+```
+
+HTTP 404 means no lyrics. The JSON has `lyrics.syncType` (`UNSYNCED`, `LINE_SYNCED`, `SYLLABLE_SYNCED`) and `lyrics.lines[]` with `startTimeMs` (as a string) and `words`. Lines containing only `♪` mark instrumental passages.
+
+## Radio
+
+```text
+GET spclient/inspiredby-mix/v2/seed_to_playlist/{seed_uri}?response-format=json
+```
+
+The answer is JSON. The radio is the playlist in `mediaItems[0].uri`; read it like any playlist. Seeds can be tracks, artists, albums or playlists.
+
+**Live:** for an album seed, the service returns the radio of the album's main artist, the same playlist for every album of that artist. To get a radio that reflects the album, seed five tracks spread evenly over the album and interleave the five resulting radios without duplicates.
+
+## Account attributes
+
+```text
+GET spclient/nebula/v1/configuration/attributes
+```
+
+Protobuf. Field 1 lists entries: 1 = name, 2 = value (2 = bool, 3 = int, 4 = string). These are the attributes the native session reads at startup. They include playback-license related values, so the native engine needs them before it can prepare audio. See [08-native-engine.md](08-native-engine.md).

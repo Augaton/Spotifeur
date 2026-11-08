@@ -1,0 +1,39 @@
+name: Protocol notes
+description: Report an error or a change in the Spotify protocol documentation
+title: "[Protocol]: "
+labels: ["protocol", "needs triage"]
+body:
+  - type: input
+    id: page
+    attributes:
+      label: Page
+      placeholder: "Example: protocol/03-login5.md"
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: Spotify Android version you checked
+      placeholder: "Example: 9.2.0.26 (148373686)"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: evidence
+    attributes:
+      label: Evidence level
+      options:
+        - Static (APK analysis)
+        - Tested with doubles
+        - Live (real service)
+    validations:
+      required: true
+
+  - type: textarea
+    id: details
+    attributes:
+      label: What is wrong or changed?
+      description: Describe the evidence. Do not paste decompiled Spotify code, tokens or captured account traffic.
+    validations:
+      required: true

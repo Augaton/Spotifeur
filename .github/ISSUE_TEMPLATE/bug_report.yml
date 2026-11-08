@@ -1,0 +1,125 @@
+name: Bug report
+description: Report a problem with Spotifeur
+title: "[Bug]: "
+labels: ["bug", "needs triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting a bug. Please give enough detail to reproduce it.
+        **Never paste tokens, passwords, email addresses or unredacted logs.**
+
+  - type: input
+    id: version
+    attributes:
+      label: Spotifeur version or commit
+      placeholder: "Example: 1.1.2 or a1b2c3d"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Affected area
+      options:
+        - Sign-in / session
+        - Home / library
+        - Search
+        - Album / artist / playlist page
+        - Playlist creation or editing
+        - Playback / audio
+        - Queue / shuffle / repeat
+        - Lyrics
+        - Offline / downloads / cache
+        - Background playback / notification
+        - Equalizer
+        - Cast
+        - Settings / appearance
+        - Build from source
+        - Other
+    validations:
+      required: true
+
+  - type: dropdown
+    id: build
+    attributes:
+      label: Build type
+      options:
+        - Built with the native engine (Spotify APKM supplied)
+        - Built with -PnativeRuntime=false
+        - CI artifact
+        - Not sure
+    validations:
+      required: true
+
+  - type: input
+    id: android
+    attributes:
+      label: Android version
+      placeholder: "Example: Android 16"
+    validations:
+      required: true
+
+  - type: input
+    id: device
+    attributes:
+      label: Device model
+      placeholder: "Example: Pixel 9, Galaxy S24"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: account
+    attributes:
+      label: Spotify plan
+      options:
+        - Premium
+        - Free
+        - Not sure
+    validations:
+      required: true
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: What happened?
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Open ...
+        2. Tap ...
+        3. See ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+
+  - type: dropdown
+    id: frequency
+    attributes:
+      label: How often does it happen?
+      options:
+        - Always
+        - Often
+        - Sometimes
+        - Only once
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Screenshots or logs
+      description: Redacted `adb logcat` output, for example `adb logcat | grep -i spotifeur`. Remove tokens, usernames and email addresses first.
+    validations:
+      required: false

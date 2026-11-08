@@ -1,0 +1,54 @@
+name: Build problem
+description: Report a problem building Spotifeur from source
+title: "[Build]: "
+labels: ["build", "needs triage"]
+body:
+  - type: input
+    id: commit
+    attributes:
+      label: Commit
+    validations:
+      required: true
+
+  - type: input
+    id: os
+    attributes:
+      label: Operating system
+      placeholder: "Example: macOS 26, Ubuntu 24.04"
+    validations:
+      required: true
+
+  - type: input
+    id: jdk
+    attributes:
+      label: JDK version
+      placeholder: "Output of java -version"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: runtime
+    attributes:
+      label: Native engine
+      options:
+        - APKM supplied with -PspotifyArtifact
+        - Extracted files in native-runtime/artifacts
+        - Built with -PnativeRuntime=false
+    validations:
+      required: true
+
+  - type: textarea
+    id: command
+    attributes:
+      label: Command
+      render: shell
+    validations:
+      required: true
+
+  - type: textarea
+    id: output
+    attributes:
+      label: Error output
+      render: text
+    validations:
+      required: true
