@@ -50,7 +50,7 @@ import kotlin.math.max
 import kotlin.math.sin
 
 // Roman Multilang
-/** PixelPlayer romanizes through bundled dictionaries; Spotifeur does not ship them. */
+/** Romanization needs bundled dictionaries, which Spotifeur does not ship. */
 object MultiLangRomanizer {
     fun isScriptThatNeedsRomanization(@Suppress("UNUSED_PARAMETER") text: String): Boolean = false
 }

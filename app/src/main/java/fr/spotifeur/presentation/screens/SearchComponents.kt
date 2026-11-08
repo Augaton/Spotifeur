@@ -1,6 +1,5 @@
 package fr.spotifeur.presentation.screens
 
-// Derived from PixelPlayer (third_party/pixelplayer/LICENSE).
 import fr.spotifeur.presentation.components.SmartImageListTargetSize
 import fr.spotifeur.utils.formatSongCount
 import androidx.compose.animation.AnimatedContent
@@ -123,7 +122,7 @@ import fr.spotifeur.data.model.Album
 import fr.spotifeur.data.model.Artist
 import fr.spotifeur.data.model.Playlist
 import fr.spotifeur.ui.theme.GoogleSansRounded
-import fr.spotifeur.ui.theme.LocalPixelPlayDarkTheme
+import fr.spotifeur.ui.theme.LocalSpotifeurDarkTheme
 import fr.spotifeur.presentation.viewmodel.ColorSchemePair
 import fr.spotifeur.presentation.viewmodel.PlayerViewModel
 import fr.spotifeur.presentation.components.SmartImage

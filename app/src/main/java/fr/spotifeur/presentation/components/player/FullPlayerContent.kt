@@ -1987,7 +1987,7 @@ private fun AlbumPlaceholder(
         Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
             Icon(
                 modifier = Modifier.size(86.dp),
-                painter = painterResource(R.drawable.pixelplay_base_monochrome),
+                painter = painterResource(R.drawable.rounded_music_note_24),
                 contentDescription = null,
                 tint = onColor
             )

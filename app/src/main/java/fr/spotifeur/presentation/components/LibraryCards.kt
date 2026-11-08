@@ -1,6 +1,5 @@
 package fr.spotifeur.presentation.components
 
-// Derived from PixelPlayer (third_party/pixelplayer/LICENSE).
 import fr.spotifeur.presentation.screens.search.components.GenreTypography
 import fr.spotifeur.utils.formatSongCount
 import android.os.Trace
@@ -199,7 +198,7 @@ import fr.spotifeur.data.model.Album
 import fr.spotifeur.data.model.Artist
 import fr.spotifeur.data.model.Playlist
 import fr.spotifeur.ui.theme.GoogleSansRounded
-import fr.spotifeur.ui.theme.LocalPixelPlayDarkTheme
+import fr.spotifeur.ui.theme.LocalSpotifeurDarkTheme
 import fr.spotifeur.presentation.viewmodel.ColorSchemePair
 import fr.spotifeur.presentation.viewmodel.PlayerViewModel
 import fr.spotifeur.presentation.components.subcomps.AutoSizingTextToFill
@@ -222,7 +221,7 @@ fun AlbumGridItemRedesigned(
     onSelectionToggle: () -> Unit = {}
 ) {
     val albumColorSchemePair by albumColorSchemePairFlow.collectAsStateWithLifecycle()
-    val systemIsDark = LocalPixelPlayDarkTheme.current
+    val systemIsDark = LocalSpotifeurDarkTheme.current
 
     // 1. Obtén el colorScheme del tema actual aquí, en el scope Composable.
     val currentMaterialColorScheme = MaterialTheme.colorScheme
@@ -503,7 +502,7 @@ fun AlbumListItem(
     onSelectionToggle: () -> Unit = {}
 ) {
     val albumColorSchemePair by albumColorSchemePairFlow.collectAsStateWithLifecycle()
-    val systemIsDark = LocalPixelPlayDarkTheme.current
+    val systemIsDark = LocalSpotifeurDarkTheme.current
     val currentMaterialColorScheme = MaterialTheme.colorScheme
 
     val itemDesignColorScheme = remember(albumColorSchemePair, systemIsDark, currentMaterialColorScheme) {

@@ -90,7 +90,7 @@ import fr.spotifeur.data.MusicKind
 import fr.spotifeur.utils.formatSongCount
 import fr.spotifeur.presentation.viewmodel.PlayerViewModel
 import fr.spotifeur.ui.theme.GoogleSansRounded
-import fr.spotifeur.ui.theme.LocalPixelPlayDarkTheme
+import fr.spotifeur.ui.theme.LocalSpotifeurDarkTheme
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
 import racra.compose.smooth_corner_rect_library.AbsoluteSmoothCornerShape
@@ -170,7 +170,7 @@ fun LibraryScreen(model: SpotifeurModel, navController: NavHostController, paddi
         optionsFor = it
     }
 
-    val dark = LocalPixelPlayDarkTheme.current
+    val dark = LocalSpotifeurDarkTheme.current
     val gradientColors = if (dark) {
         listOf(MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f), Color.Transparent)
     } else {

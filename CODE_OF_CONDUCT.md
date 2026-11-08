@@ -13,7 +13,7 @@ Spotifeur is a small open-source project. Keep discussions useful, respectful an
 
 - Harassment, personal attacks or discriminatory language.
 - Sharing private information without permission, including account names, tokens, logs with credentials or other people's data.
-- Posting Spotify binaries, decompiled Spotify code, keys, cracked accounts or links to them.
+- Posting keys, tokens, cracked accounts or links to them.
 - Posting malicious files, phishing links or unsafe installation instructions.
 - Repeatedly derailing technical discussions.
 

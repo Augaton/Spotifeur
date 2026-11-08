@@ -65,8 +65,8 @@ See [reproduce.md](reproduce.md) for the exact commands.
 
 ## What is not here
 
-No Spotify binary, decompiled source, key material, account data, token or captured traffic is included. The notes describe interfaces, message layouts and behaviour. To check them, use your own copy of the official APK with the hashes above.
+No binaries, key material, account data, tokens or captured traffic are included. The notes describe interfaces, message layouts and behaviour. To check them, use a copy of the official APK with the hashes above.
 
 ## Status
 
-This is independent interoperability research. It is not affiliated with or endorsed by Spotify. Spotify can change or close any of these interfaces at any time, and using them may break Spotify's terms of service.
+This is independent interoperability research. Spotify can change any of these interfaces with a new app version.

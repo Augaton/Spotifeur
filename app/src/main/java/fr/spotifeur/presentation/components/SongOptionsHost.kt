@@ -12,7 +12,7 @@ import fr.spotifeur.data.model.toSong
 import fr.spotifeur.presentation.navigation.openMusic
 import fr.spotifeur.presentation.viewmodel.PlayerViewModel
 
-/** PixelPlayer's track sheet wired for screens outside the player. */
+/** The track sheet, wired for screens outside the player. */
 @Composable
 fun SongOptionsHost(
     ui: PlayerViewModel,

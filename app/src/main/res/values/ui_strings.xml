@@ -25,7 +25,7 @@
     <string name="cast_local_playback">Local playback</string>
     <string name="cast_nearby_devices">Nearby devices</string>
     <string name="cast_paused">Paused</string>
-    <string name="cast_perm_body">Allow PixelPlayer to see your nearby devices and current Wi‑Fi so we can keep your cast, Bluetooth audio, and speakers in sync.</string>
+    <string name="cast_perm_body">Allow Spotifeur to see your nearby devices and current Wi‑Fi so we can keep your cast, Bluetooth audio, and speakers in sync.</string>
     <string name="cast_perm_footer">We only use these permissions for device interconnectivity — casting, controlling nearby speakers, and keeping audio in sync.</string>
     <string name="cast_perm_location_desc">Android requires Location to share the Wi‑Fi network (SSID) you\'re on so we can find compatible cast devices.</string>
     <string name="cast_perm_location_title">Location for Wi‑Fi</string>

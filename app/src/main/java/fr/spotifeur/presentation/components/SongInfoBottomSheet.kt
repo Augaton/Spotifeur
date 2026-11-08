@@ -1,6 +1,5 @@
 package fr.spotifeur.presentation.components
 
-// Derived from PixelPlayer (third_party/pixelplayer/LICENSE).
 import androidx.compose.material.icons.rounded.Download
 import androidx.compose.material.icons.rounded.DownloadDone
 import androidx.compose.material.icons.automirrored.rounded.PlaylistAdd
@@ -112,7 +111,7 @@ import fr.spotifeur.data.model.Album
 import fr.spotifeur.data.model.Artist
 import fr.spotifeur.data.model.Playlist
 import fr.spotifeur.ui.theme.GoogleSansRounded
-import fr.spotifeur.ui.theme.LocalPixelPlayDarkTheme
+import fr.spotifeur.ui.theme.LocalSpotifeurDarkTheme
 import fr.spotifeur.presentation.viewmodel.ColorSchemePair
 import fr.spotifeur.presentation.viewmodel.PlayerViewModel
 import fr.spotifeur.presentation.components.subcomps.AutoSizingTextToFill

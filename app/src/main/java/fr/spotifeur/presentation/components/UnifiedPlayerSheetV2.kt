@@ -84,7 +84,7 @@ import fr.spotifeur.presentation.components.scoped.rememberSheetVisualState
 import fr.spotifeur.presentation.viewmodel.PlayerSheetState
 import fr.spotifeur.presentation.viewmodel.PlayerViewModel
 import fr.spotifeur.presentation.viewmodel.StablePlayerState
-import fr.spotifeur.ui.theme.LocalPixelPlayDarkTheme
+import fr.spotifeur.ui.theme.LocalSpotifeurDarkTheme
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
@@ -459,7 +459,7 @@ fun UnifiedPlayerSheetV2(
 
     val activePlayerSchemePair by playerViewModel.activePlayerColorSchemePair.collectAsStateWithLifecycle()
     val themedAlbumArtUri by playerViewModel.currentThemedAlbumArtUri.collectAsStateWithLifecycle()
-    val isDarkTheme = LocalPixelPlayDarkTheme.current
+    val isDarkTheme = LocalSpotifeurDarkTheme.current
     val currentSong = infrequentPlayerState.currentSong
     val sheetThemeState = rememberSheetThemeState(
         activePlayerSchemePair = activePlayerSchemePair,

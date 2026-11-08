@@ -25,7 +25,6 @@
     <string name="settings_storage_subtitle">Artwork, lyrics and downloads</string>
     <string name="settings_account_title">Spotify account</string>
     <string name="settings_account_subtitle">Session on this device</string>
-    <string name="settings_pixelplayer_credit">Interface based on PixelPlayer (© Theo Vilardo), personal and non-commercial use.</string>
     <string name="settings_player_theme_album">Album art</string>
     <string name="settings_player_theme_app">App theme</string>
     <string name="settings_carousel_none">No preview</string>

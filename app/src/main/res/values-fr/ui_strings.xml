@@ -25,7 +25,7 @@
     <string name="cast_local_playback">Lecture locale</string>
     <string name="cast_nearby_devices">Appareils proches</string>
     <string name="cast_paused">En pause</string>
-    <string name="cast_perm_body">Autorisez PixelPlayer à voir vos appareils proches et votre Wi-Fi actuel pour synchroniser votre diffusion, audio Bluetooth et haut-parleurs.</string>
+    <string name="cast_perm_body">Autorisez Spotifeur à voir vos appareils proches et votre Wi-Fi actuel pour synchroniser votre diffusion, audio Bluetooth et haut-parleurs.</string>
     <string name="cast_perm_footer">Nous utilisons ces autorisations uniquement pour l\'interconnexion des appareils — diffusion, contrôle des haut-parleurs proches et synchronisation audio.</string>
     <string name="cast_perm_location_desc">Android nécessite la localisation pour partager le réseau Wi-Fi (SSID) auquel vous êtes connecté afin que nous puissions trouver des appareils de diffusion compatibles.</string>
     <string name="cast_perm_location_title">Localisation pour le Wi-Fi</string>

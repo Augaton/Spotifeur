@@ -9,5 +9,4 @@
 - The engine binaries are produced from the supplied APKM by the `prepareSpotifyRuntime` task, with verified hashes. Never add them to Git.
 - The player uses HLS mode 4 and NativeMediaProcessor. `GetMediaHandleId(AUDIO)` needs the full 20-byte file ID (40 hex characters). The 16-byte MP4 KID is only used to find the context. Do not truncate the ID in the request and do not reintroduce MediaCrypto on this path.
 - Shuffle reorders the queue inside `SpotifyPlayer`. Media3's own shuffle mode stays off.
-- The UI (`presentation/`, `ui/theme`) is derived from PixelPlayer, whose current license does not allow redistributing derivative works without its author's written permission. See `third_party/pixelplayer/`. Do not publish the repository or an APK until that is settled.
 - Everything in the repository is written in English. The app ships English (default) and French strings.

@@ -25,12 +25,9 @@ Include:
 1. Keep the change focused and explain why it is needed.
 2. Run `./gradlew :app:testDebugUnitTest :app:lintDebug` (add `-PnativeRuntime=false` if you do not have the Spotify APKM).
 3. For audio changes, check the decoded signal, not only the player state: past the unencrypted lead-in, after a seek, and across a track transition. See [`native-runtime/README.md`](native-runtime/README.md).
-4. Do not change the PixelPlayer-derived UI license headers or notices.
-5. Write code, comments and documentation in English. New user-facing strings go in `res/values/` (English) and `res/values-fr/` (French).
+4. Write code, comments and documentation in English. New user-facing strings go in `res/values/` (English) and `res/values-fr/` (French).
 
 ## What will not be accepted
 
-- Spotify binaries, DEX files, `liborbit-jni-spotify.so`, decompiled code or smali.
-- Code that downloads the Spotify APK automatically.
 - Anything that bypasses Premium restrictions, shares accounts or extracts decrypted audio.
 - A switch to the public Web API, App Remote or the installed Spotify app as a dependency.

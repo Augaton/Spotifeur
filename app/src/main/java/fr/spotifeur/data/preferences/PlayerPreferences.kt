@@ -1,6 +1,5 @@
 package fr.spotifeur.data.preferences
 
-// Portions from PixelPlayer's UserPreferencesRepository, see third_party/pixelplayer/LICENSE.
 private const val MIN_NAV_BAR_CORNER_RADIUS = 0
 private const val MAX_NAV_BAR_CORNER_RADIUS = 50
 

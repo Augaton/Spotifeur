@@ -34,6 +34,6 @@ body:
     id: details
     attributes:
       label: What is wrong or changed?
-      description: Describe the evidence. Do not paste decompiled Spotify code, tokens or captured account traffic.
+      description: Describe the evidence. Do not paste tokens or captured account traffic.
     validations:
       required: true

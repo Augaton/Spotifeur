@@ -35,7 +35,7 @@ import java.net.NetworkInterface
 data class RemotePlayback(val isPlaying: Boolean, val positionMs: Long, val durationMs: Long, val index: Int)
 
 /**
- * Output devices for PixelPlayer's panel. Bluetooth and system routes carry every track. Google Cast
+ * Output devices for the cast panel. Bluetooth and system routes carry every track. Google Cast
  * receives local files only: a Spotify track stays on the phone, since sending it would mean taking
  * its audio out of the protected playback path.
  */

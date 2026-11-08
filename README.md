@@ -11,6 +11,7 @@
 <p align="center">
   <a href="https://github.com/jean-voila/Spotifeur/actions/workflows/build.yml"><img alt="Build" src="https://img.shields.io/github/actions/workflow/status/jean-voila/Spotifeur/build.yml?branch=main&style=flat-square&label=build"></a>
   <a href="https://github.com/jean-voila/Spotifeur/releases/latest"><img alt="Latest release" src="https://img.shields.io/github/v/release/jean-voila/Spotifeur?style=flat-square&label=release&color=10a37f"></a>
+  <a href="https://github.com/jean-voila/Spotifeur/releases/latest"><img alt="Download APK, total downloads" src="https://img.shields.io/github/downloads/jean-voila/Spotifeur/total?style=flat-square&label=Download%20APK&color=10a37f"></a>
   <a href="LICENSE"><img alt="License" src="https://img.shields.io/badge/license-GPL--3.0-6b7280?style=flat-square"></a>
   <img alt="Android 8.0+" src="https://img.shields.io/badge/Android-8.0%2B-3ddc84?style=flat-square&logo=android&logoColor=white">
   <img alt="Kotlin" src="https://img.shields.io/badge/Kotlin-Jetpack%20Compose-7f52ff?style=flat-square&logo=kotlin&logoColor=white">
@@ -26,6 +27,8 @@
 </p>
 
 <p align="center">
+  <a href="https://github.com/jean-voila/Spotifeur/releases/latest"><strong>Download APK</strong></a>
+  ·
   <a href="https://jean-voila.github.io/Spotifeur/">Website</a>
   ·
   <a href="#build-from-source">Build from source</a>
@@ -95,16 +98,18 @@ Everything learned along the way is documented in [`protocol/`](protocol/), as a
 - There is no Spotifeur server, no analytics and no tracking. The app talks to Spotify, and to [LRCLIB](https://lrclib.net) for lyrics Spotify does not have (title, artist, album and duration only; you can turn it off).
 - Your password is never stored. The email-code sign-in does not use one at all.
 - The session credential stays on your device, encrypted with Android Keystore.
-- You build the APK yourself, from this source and your own copy of the official Spotify APK.
-
-Spotifeur is not affiliated with or endorsed by Spotify. Using a third-party client may break Spotify's terms of service and could lead to your account being restricted. Use it at your own risk.
+- Each release lists the SHA-256 of the APK and of its signing certificate. You can also build the APK yourself from this source and your own copy of the official Spotify APK.
 
 ## What Spotifeur does not do
 
 - Bypass Premium or play anything your account is not allowed to play.
 - Save decrypted audio. Downloads stay encrypted and are only processed by Spotify's engine at playback time.
 - Share accounts or proxy your traffic.
-- Include or download any Spotify binary. You provide the official APK yourself.
+- Download anything from Spotify at build time. To build it yourself, you provide the official APK.
+
+## Install
+
+Download `Spotifeur-vX.Y.Z.apk` from the [latest release](https://github.com/jean-voila/Spotifeur/releases/latest) and install it on an ARM64 phone with Android 8.0 or later. Check its SHA-256 against the release notes. Then open Spotifeur, enter your Spotify email address and type the code Spotify sends you.
 
 ## Build from source
 
@@ -125,7 +130,9 @@ Without the APKM, `-PnativeRuntime=false` builds the app and runs the tests, but
 ./gradlew -PnativeRuntime=false :app:assembleDebug :app:testDebugUnitTest :app:lintDebug
 ```
 
-Then open Spotifeur, enter your Spotify email address and type the code Spotify sends you.
+A build you make yourself is signed with your own key: uninstall a release build first (this erases the session and downloads).
+
+To publish a release, `scripts/release.sh --apkm /path/to/spotify.apkm` builds, signs, checks and uploads the APK. Run it with `--help` for the options.
 
 ## Documentation
 
@@ -139,10 +146,9 @@ Then open Spotifeur, enter your Spotify email address and type the code Spotify 
 
 ## Credits
 
-- The interface is derived from [PixelPlayer](https://github.com/PixelPlayerHQ/PixelPlayer) by Theo Vilardo and contributors. See [`third_party/pixelplayer/`](third_party/pixelplayer/) for its license.
 - [librespot](https://github.com/librespot-org/librespot) for its public work on Spotify's protocols.
 - [AndroidX Media3](https://github.com/androidx/media), [Jetpack Compose](https://developer.android.com/compose), [OkHttp](https://square.github.io/okhttp/), [Coil](https://coil-kt.github.io/coil/) and [LRCLIB](https://lrclib.net).
 
 ## License
 
-Spotifeur's own code is licensed under the [GNU General Public License v3.0](LICENSE). The PixelPlayer-derived interface code is not covered by this license; see [`third_party/pixelplayer/`](third_party/pixelplayer/). Spotify is a trademark of Spotify AB. This project is not affiliated with Spotify.
+[GNU General Public License v3.0](LICENSE).

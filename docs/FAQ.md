@@ -6,11 +6,11 @@ Yes. Spotifeur is a client for your Spotify account: it shows your library and p
 
 ## Do I need the official Spotify app installed?
 
-No. Spotifeur does not use the installed app. At build time, you supply the official APKM so that Spotify's audio engine can be packaged inside Spotifeur.
+No. Spotifeur does not use the installed app. Spotify's audio engine, taken unchanged from the official APK, is packaged inside Spotifeur.
 
-## Why is there no APK to download?
+## Where do I get the APK?
 
-The audio engine is Spotify's code, taken from the official APK. It cannot be redistributed in this repository or in releases, so you build Spotifeur yourself with your own copy of the official APKM. See [Build from source](../README.md#build-from-source).
+From the [latest release](https://github.com/jean-voila/Spotifeur/releases/latest). Each release lists the SHA-256 of the APK and of its signing certificate. You can also build it yourself from the source and your own copy of the official APKM: see [Build from source](../README.md#build-from-source). A build you made yourself is signed with a different key, so uninstall the other one first (this erases the session and downloads).
 
 ## Which Spotify version is needed?
 
@@ -35,10 +35,6 @@ Yes. Saved tracks, albums, followed artists and playlists use the same services 
 ## How does offline playback work?
 
 Download an album, a playlist or a track from its page. Recently played and upcoming tracks are also kept in a cache you can size in Settings → Cached storage. Audio stays encrypted on the device. The offline mode switch stops all network access from the app.
-
-## Can my account be banned?
-
-Spotifeur behaves like the official Android client, but it is not the official client. Spotify's terms of service do not allow unofficial clients, and Spotify could restrict an account that uses one. Use it at your own risk.
 
 ## Can I use Spotifeur to save MP3 files or skip Premium?
 

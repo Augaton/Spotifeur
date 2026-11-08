@@ -25,7 +25,6 @@
     <string name="settings_storage_subtitle">Pochettes, paroles et téléchargements</string>
     <string name="settings_account_title">Compte Spotify</string>
     <string name="settings_account_subtitle">Session de cet appareil</string>
-    <string name="settings_pixelplayer_credit">Interface issue de PixelPlayer (© Theo Vilardo), usage personnel et non commercial.</string>
     <string name="settings_player_theme_album">Pochette</string>
     <string name="settings_player_theme_app">Thème de l’application</string>
     <string name="settings_carousel_none">Sans aperçu</string>

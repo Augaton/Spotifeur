@@ -63,7 +63,7 @@ import org.json.JSONArray
 import java.util.concurrent.ConcurrentHashMap
 
 /**
- * The surface PixelPlayer's composables expect from their PlayerViewModel, implemented on top of
+ * The surface the composables expect from their PlayerViewModel, implemented on top of
  * Spotifeur's Spotify session and Media3 player. It owns no audio, network or credential logic.
  */
 @androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
@@ -80,7 +80,7 @@ class PlayerViewModel(val model: SpotifeurModel, private val scope: CoroutineSco
     }
     private val entities = ConcurrentHashMap<Long, Music>()
 
-    /** Resolves the Long id PixelPlayer's navigation carries back to its Spotify entity. */
+    /** Resolves the Long id the navigation carries back to its Spotify entity. */
     fun register(item: Music): Long = spotifyLongId(item.id).also { entities[it] = item }
     fun entity(id: Long): Music? = entities[id]
     fun entity(uri: String): Music? = entities[spotifyLongId(uri)]
@@ -519,7 +519,7 @@ class PlayerViewModel(val model: SpotifeurModel, private val scope: CoroutineSco
     val playCount: StateFlow<Float> = mutablePlayCount.asStateFlow()
     private var countedJob: Job? = null
 
-    /** Pauses once [count] more tracks have started, as PixelPlayer's counter does. */
+    /** Pauses once [count] more tracks have started. */
     fun playCounted(count: Int) {
         cancelCountedPlay()
         if (count <= 0) return
@@ -645,7 +645,7 @@ class PlayerViewModel(val model: SpotifeurModel, private val scope: CoroutineSco
             mutableLyrics.value = LyricsState(song.id, lyrics = lyrics, offset = offset)
         }
     }
-    /** Called by PixelPlayer's "fetch" dialog: the source chain, then its picker when asked for. */
+    /** Called by the "fetch" dialog: the source chain, then its picker when asked for. */
     fun fetchLyricsForCurrentSong(forcePick: Boolean) {
         val song = stablePlayerState.value.currentSong ?: return
         lyricsJob?.cancel()

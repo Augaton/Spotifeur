@@ -152,12 +152,6 @@ fun SettingsScreen(model: SpotifeurModel, navController: NavHostController) {
         CategoryRow(stringResource(R.string.settings_storage_title), stringResource(R.string.settings_storage_subtitle), Icons.Rounded.Storage) { open("storage") }
         CategoryRow(stringResource(R.string.settings_category_backup_title), stringResource(R.string.settings_category_backup_subtitle), Icons.Rounded.Backup) { open("backup") }
         CategoryRow(stringResource(R.string.settings_account_title), stringResource(R.string.settings_account_subtitle), Icons.AutoMirrored.Rounded.Logout) { open("account") }
-        Text(
-            stringResource(R.string.settings_pixelplayer_credit),
-            modifier = Modifier.padding(horizontal = 8.dp, vertical = 16.dp),
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
     }
 }
 

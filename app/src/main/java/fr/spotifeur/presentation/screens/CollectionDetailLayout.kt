@@ -1,6 +1,5 @@
 package fr.spotifeur.presentation.screens
 
-// Derived from PixelPlayer (third_party/pixelplayer/LICENSE).
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.spring
@@ -47,7 +46,7 @@ import fr.spotifeur.data.Music
 import fr.spotifeur.data.model.toAlbum
 import fr.spotifeur.presentation.components.ExpressiveScrollBar
 import fr.spotifeur.presentation.components.MiniPlayerHeight
-import fr.spotifeur.ui.theme.LocalPixelPlayDarkTheme
+import fr.spotifeur.ui.theme.LocalSpotifeurDarkTheme
 import fr.spotifeur.ui.theme.LocalShowScrollbar
 import fr.spotifeur.presentation.viewmodel.PlayerViewModel
 
@@ -61,7 +60,7 @@ internal fun CollectionDetailLayout(
     item: Music, count: Int, ui: PlayerViewModel, navController: NavHostController,
     lazyListState: LazyListState, content: LazyListScope.() -> Unit,
 ) {
-    val isDarkTheme = LocalPixelPlayDarkTheme.current
+    val isDarkTheme = LocalSpotifeurDarkTheme.current
     val base = MaterialTheme.colorScheme
     val pair = item.imageUrl?.let { uri -> remember(uri) { ui.getAlbumColorSchemeFlow(uri) }.collectAsStateWithLifecycle().value }
     val colors = pair?.let { if (isDarkTheme) it.dark else it.light } ?: base

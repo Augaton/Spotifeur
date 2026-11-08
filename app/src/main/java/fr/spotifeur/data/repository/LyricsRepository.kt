@@ -18,7 +18,7 @@ import java.io.IOException
 import java.security.MessageDigest
 import java.util.concurrent.TimeUnit
 
-/** A candidate from LRCLIB, in the shape PixelPlayer's picker displays. */
+/** A candidate from LRCLIB, in the shape the lyrics picker displays. */
 data class LrcLibRecord(
     val id: Int,
     val name: String,
@@ -32,7 +32,7 @@ data class LrcLibRecord(
 data class LyricsSearchResult(val record: LrcLibRecord, val lyrics: Lyrics, val rawLyrics: String)
 
 /**
- * Spotify's own lyrics first when the track comes from Spotify, then LRCLIB, as PixelPlayer does.
+ * Spotify's own lyrics first when the track comes from Spotify, then LRCLIB.
  * LRCLIB only ever receives a title, an artist, an album and a duration.
  */
 class LyricsRepository(context: Context) {

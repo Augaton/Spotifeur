@@ -1,6 +1,5 @@
 package fr.spotifeur.presentation.screens
 
-// Derived from PixelPlayer (third_party/pixelplayer/LICENSE).
 import fr.spotifeur.presentation.components.MusicOptionsHost
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -73,7 +72,7 @@ import coil.request.ImageRequest
 import coil.size.Size
 import racra.compose.smooth_corner_rect_library.AbsoluteSmoothCornerShape
 import androidx.compose.ui.res.stringResource
-import fr.spotifeur.ui.theme.PixelPlayStatusBarStyle
+import fr.spotifeur.ui.theme.SpotifeurStatusBarStyle
 import fr.spotifeur.utils.formatSongCount
 import androidx.compose.material.icons.outlined.PushPin
 import androidx.compose.material.icons.rounded.Favorite
@@ -94,7 +93,7 @@ import fr.spotifeur.presentation.components.SongOptionsHost
 import fr.spotifeur.presentation.components.subcomps.EnhancedSongListItem
 import fr.spotifeur.presentation.components.subcomps.AutoSizingTextToFill
 import fr.spotifeur.presentation.navigation.openMusic
-import fr.spotifeur.ui.theme.LocalPixelPlayDarkTheme
+import fr.spotifeur.ui.theme.LocalSpotifeurDarkTheme
 import fr.spotifeur.ui.theme.LocalShowScrollbar
 import fr.spotifeur.ui.theme.GoogleSansRounded
 import fr.spotifeur.R
@@ -147,7 +146,7 @@ fun ArtistDetailScreen(
     val configuration = LocalConfiguration.current
     val density = LocalDensity.current
     val coroutineScope = rememberCoroutineScope()
-    val isDarkTheme = LocalPixelPlayDarkTheme.current
+    val isDarkTheme = LocalSpotifeurDarkTheme.current
     val baseColorScheme = MaterialTheme.colorScheme
     val artistColorSchemePair by remember(current.imageUrl) {
         ui.getAlbumColorSchemeFlow(current.imageUrl.orEmpty())
@@ -451,7 +450,7 @@ private fun CustomCollapsingTopBar(
     onPlayClick: () -> Unit,
 ) {
     val surfaceColor = MaterialTheme.colorScheme.surface
-    val statusBarColor = if (LocalPixelPlayDarkTheme.current) Color.Black.copy(alpha = 0.6f) else Color.White.copy(alpha = 0.4f)
+    val statusBarColor = if (LocalSpotifeurDarkTheme.current) Color.Black.copy(alpha = 0.6f) else Color.White.copy(alpha = 0.4f)
 
     // --- Animation Values ---
     val fabScale = 1f - collapseFraction
@@ -500,7 +499,7 @@ private fun CustomCollapsingTopBar(
             .height(headerHeight)
             .clipToBounds()
     ) {
-        PixelPlayStatusBarStyle(color = fallbackStatusBarColor)
+        SpotifeurStatusBarStyle(color = fallbackStatusBarColor)
 
         Box(
             modifier = Modifier

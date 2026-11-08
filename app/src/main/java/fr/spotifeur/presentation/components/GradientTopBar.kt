@@ -39,7 +39,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import fr.spotifeur.R
 import fr.spotifeur.ui.theme.GoogleSansRounded
-import fr.spotifeur.ui.theme.PixelPlayStatusBarStyle
+import fr.spotifeur.ui.theme.SpotifeurStatusBarStyle
 import androidx.compose.ui.res.stringResource
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -56,7 +56,7 @@ fun GenreGradientTopBar(
         Brush.verticalGradient(colors = listOf(startColor, endColor))
     }
 
-    PixelPlayStatusBarStyle(color = startColor)
+    SpotifeurStatusBarStyle(color = startColor)
 
     LargeTopAppBar(
         scrollBehavior = scrollBehavior,
@@ -103,7 +103,7 @@ fun HomeGradientTopBar(
 ) {
     val surfaceContainerHigh = MaterialTheme.colorScheme.surfaceContainerHighest
 
-    PixelPlayStatusBarStyle(color = surfaceContainerHigh)
+    SpotifeurStatusBarStyle(color = surfaceContainerHigh)
 
     val animatedAlpha by animateFloatAsState(
         targetValue = if (isScrolled) 1f else 0f,

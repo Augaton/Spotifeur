@@ -4,8 +4,8 @@ import androidx.compose.runtime.Immutable
 import fr.spotifeur.data.Music
 import fr.spotifeur.data.MusicKind
 
-// Shapes follow PixelPlayer's models (see third_party/pixelplayer/LICENSE). Every entity carries
-// its Spotify URI: PixelPlayer's Long ids become a stable hash that the registry maps back.
+// UI models. Every entity carries its Spotify URI: the Long ids the UI uses are a stable hash
+// that the registry maps back.
 
 @Immutable
 data class Song(
@@ -84,7 +84,7 @@ data class Playlist(
     val songCount: Int = 0,
 )
 
-/** Stable 64-bit id for a Spotify URI (FNV-1a), used where PixelPlayer's UI expects a Long id. */
+/** Stable 64-bit id for a Spotify URI (FNV-1a), used where the UI expects a Long id. */
 fun spotifyLongId(uri: String): Long {
     var hash = -3750763034362895579L
     uri.forEach { character -> hash = (hash xor character.code.toLong()) * 1099511628211L }

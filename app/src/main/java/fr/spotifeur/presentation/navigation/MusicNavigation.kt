@@ -5,7 +5,7 @@ import fr.spotifeur.data.Music
 import fr.spotifeur.data.MusicKind
 import fr.spotifeur.presentation.viewmodel.PlayerViewModel
 
-/** Opens a Spotify entity on the PixelPlayer screen for its kind. Tracks start playing instead. */
+/** Opens a Spotify entity on the screen for its kind. Tracks start playing instead. */
 fun NavController.openMusic(ui: PlayerViewModel, item: Music) {
     val id = ui.register(item)
     when (item.kind) {

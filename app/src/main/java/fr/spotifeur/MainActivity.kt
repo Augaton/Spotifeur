@@ -23,7 +23,7 @@ import fr.spotifeur.data.model.Song
 import fr.spotifeur.data.preferences.AppSettings
 import fr.spotifeur.presentation.components.subcomps.LocalTrackQuality
 import fr.spotifeur.ui.theme.LocalShowScrollbar
-import fr.spotifeur.ui.theme.PixelPlayTheme
+import fr.spotifeur.ui.theme.SpotifeurTheme
 import fr.spotifeur.utils.AppLocales
 
 class MainActivity : ComponentActivity() {
@@ -53,7 +53,7 @@ class MainActivity : ComponentActivity() {
                 AppSettings.THEME_DARK -> true
                 else -> isSystemInDarkTheme()
             }
-            PixelPlayTheme(darkTheme = dark) {
+            SpotifeurTheme(darkTheme = dark) {
                 val qualityRevision by model.ui.qualityRevision.collectAsStateWithLifecycle()
                 val quality = remember(settings.showQualityInLists, qualityRevision) {
                     { song: Song -> if (settings.showQualityInLists) model.ui.qualityOf(song) else null }

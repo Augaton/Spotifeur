@@ -105,7 +105,7 @@ private const val COLLAGE_ITEMS = 6
 private const val COLLAGE_MINIMUM = 3
 
 /**
- * PixelPlayer's home canvas, with its generated mixes and statistics replaced by what this app is
+ * The home canvas, with generated mixes and statistics replaced by what this app is
  * for: the items pinned on this device first, then the Spotify library.
  */
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
@@ -363,7 +363,7 @@ private fun PinsCollage(
 private val PinPillHeight = 64.dp
 private val PinPillArtSize = 52.dp
 
-/** PixelPlayer's recently played pill, tinted from the artwork. */
+/** The recently played pill, tinted from the artwork. */
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun PinnedPill(

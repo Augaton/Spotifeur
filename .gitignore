@@ -13,3 +13,6 @@ local.properties
 *.iml
 
 .kotlin/
+
+# Release output
+dist/

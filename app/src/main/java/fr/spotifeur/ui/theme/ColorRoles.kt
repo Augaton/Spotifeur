@@ -1,4 +1,4 @@
-@file:Suppress("RestrictedApi") // Material color utilities, used as PixelPlayer does.
+@file:Suppress("RestrictedApi") // Material color utilities.
 
 package fr.spotifeur.ui.theme
 

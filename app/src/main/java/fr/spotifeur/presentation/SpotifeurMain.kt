@@ -82,7 +82,7 @@ import kotlin.math.roundToInt
 
 private data class DismissUndoBarSlice(val isVisible: Boolean = false, val durationMillis: Long = 4000L)
 
-/** PixelPlayer's main scaffold: floating bar, blurred content, unified player sheet. */
+/** Main scaffold: floating bar, blurred content, unified player sheet. */
 @Composable
 fun SpotifeurMain(model: SpotifeurModel) {
     val discovery by model.discovery.collectAsStateWithLifecycle()

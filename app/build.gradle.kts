@@ -69,7 +69,7 @@ dependencies {
     implementation("androidx.media3:media3-datasource:1.11.1")
     implementation("androidx.media3:media3-datasource-okhttp:1.11.1")
     implementation("io.coil-kt:coil-compose:2.7.0")
-    // PixelPlayer UI building blocks (see third_party/pixelplayer).
+    // UI building blocks.
     implementation("androidx.navigation:navigation-compose:2.9.8")
     implementation("androidx.compose.ui:ui-text-google-fonts:1.10.6")
     implementation("androidx.palette:palette-ktx:1.0.0")

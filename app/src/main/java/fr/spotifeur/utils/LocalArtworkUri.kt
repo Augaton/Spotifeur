@@ -3,7 +3,7 @@ package fr.spotifeur.utils
 import android.net.Uri
 
 object LocalArtworkUri {
-    const val SCHEME = "pixelplay_local_art"
+    const val SCHEME = "spotifeur_local_art"
     private const val HOST_SONG = "song"
     private const val CACHE_BUST_QUERY = "t"
 

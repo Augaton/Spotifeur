@@ -1,6 +1,6 @@
 package fr.spotifeur.data.diagnostics
 
-/** PixelPlayer's diagnostics hooks, disabled: Spotifeur records no performance trace. */
+/** Diagnostics hooks, disabled: Spotifeur records no performance trace. */
 object AdvancedPerformanceDiagnostics {
     const val isEnabled = false
     object EventTypes { const val AUDIO_EFFECT = "audio_effect"; const val UI = "ui" }

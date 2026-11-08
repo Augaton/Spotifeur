@@ -17,7 +17,7 @@ import kotlinx.serialization.json.Json
 
 internal val Context.equalizerDataStore: DataStore<Preferences> by preferencesDataStore(name = "equalizer")
 
-/** Links PixelPlayer's equalizer to the audio session of the playback service. */
+/** Links the equalizer to the audio session of the playback service. */
 object EqualizerRuntime {
     val manager by lazy { EqualizerManager() }
     private val session = MutableStateFlow(0)

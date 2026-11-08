@@ -1,10 +1,9 @@
 package fr.spotifeur.presentation.screens
 
-// Derived from PixelPlayer (third_party/pixelplayer/LICENSE).
 import androidx.compose.material.icons.rounded.Share
 import fr.spotifeur.presentation.utils.shareMusic
 import androidx.compose.foundation.layout.FlowRow
-import fr.spotifeur.ui.theme.PixelPlayStatusBarStyle
+import fr.spotifeur.ui.theme.SpotifeurStatusBarStyle
 import fr.spotifeur.utils.formatSongCount
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -73,7 +72,7 @@ import fr.spotifeur.presentation.components.SmartImage
 import fr.spotifeur.presentation.components.SongOptionsHost
 import fr.spotifeur.presentation.components.subcomps.EnhancedSongListItem
 import fr.spotifeur.presentation.navigation.openMusic
-import fr.spotifeur.ui.theme.LocalPixelPlayDarkTheme
+import fr.spotifeur.ui.theme.LocalSpotifeurDarkTheme
 import fr.spotifeur.utils.shapes.RoundedStarShape
 import androidx.compose.foundation.lazy.itemsIndexed
 import fr.spotifeur.R
@@ -145,7 +144,7 @@ internal fun CollapsingAlbumTopBar(
 ) {
     val surfaceColor = MaterialTheme.colorScheme.surface
     val statusBarColor =
-        if (LocalPixelPlayDarkTheme.current) Color.Black.copy(alpha = 0.6f) else Color.White.copy(
+        if (LocalSpotifeurDarkTheme.current) Color.Black.copy(alpha = 0.6f) else Color.White.copy(
             alpha = 0.4f
         )
 
@@ -196,7 +195,7 @@ internal fun CollapsingAlbumTopBar(
             .height(headerHeight)
             .clipToBounds()
     ) {
-        PixelPlayStatusBarStyle(color = fallbackStatusBarColor)
+        SpotifeurStatusBarStyle(color = fallbackStatusBarColor)
 
         Box(
             modifier = Modifier
