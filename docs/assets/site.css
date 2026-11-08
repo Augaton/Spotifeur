@@ -45,7 +45,7 @@ a:hover { color: var(--primary-bright); }
     -webkit-font-feature-settings: 'liga';
     font-feature-settings: 'liga';
     -webkit-font-smoothing: antialiased;
-    font-variation-settings: 'FILL' 1, 'wght' 500, 'GRAD' 0, 'opsz' 24;
+    font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
 }
 
 .bg {
@@ -98,17 +98,12 @@ h1 {
     color: var(--text);
     font-weight: 600;
     font-size: 0.95rem;
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
     transition: transform 0.2s, background 0.2s;
 }
 .button .icon { font-size: 20px; }
 .button:hover { color: var(--text); background: #2a3630; transform: translateY(-2px); }
-.button.primary {
-    background: linear-gradient(135deg, var(--primary) 0%, var(--primary-strong) 100%);
-    color: var(--primary-deep);
-    box-shadow: 0 10px 30px rgba(15, 157, 99, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.35);
-}
-.button.primary:hover { color: var(--primary-deep); background: linear-gradient(135deg, var(--primary-bright) 0%, var(--primary) 100%); }
+.button.primary { background: var(--text); color: #0A100D; }
+.button.primary:hover { background: #ffffff; color: #0A100D; }
 
 main { max-width: 1080px; margin: 0 auto; padding: 0 16px; }
 
@@ -147,18 +142,18 @@ h2 {
     position: relative;
     padding: 22px;
     border-radius: 28px;
-    background: linear-gradient(160deg, var(--surface-high) 0%, var(--surface) 100%);
-    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+    background: var(--surface);
+    border: 1px solid rgba(255, 255, 255, 0.06);
 }
 .card > .icon {
     display: inline-grid;
     place-items: center;
-    width: 48px;
-    height: 48px;
-    border-radius: 16px;
-    color: var(--primary-deep);
-    background: linear-gradient(135deg, var(--primary) 0%, var(--primary-strong) 100%);
-    box-shadow: 0 6px 16px rgba(15, 157, 99, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.35);
+    width: 44px;
+    height: 44px;
+    border-radius: 14px;
+    color: var(--primary);
+    background: rgba(111, 227, 166, 0.10);
+    font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
 }
 .card h3 { margin-top: 14px; font-size: 1.05rem; font-weight: 650; }
 .card p { margin-top: 2px; color: var(--text-2); font-size: 0.92rem; font-variation-settings: 'ROND' 0; }
@@ -186,7 +181,7 @@ h2 {
 .list li { color: var(--text-2); padding-left: 34px; }
 
 .faq { max-width: 720px; margin: 28px auto 0; display: grid; gap: 10px; }
-details { border-radius: 20px; background: var(--surface); padding: 16px 20px; }
+details { border-radius: 20px; background: var(--surface); border: 1px solid rgba(255, 255, 255, 0.06); padding: 16px 20px; }
 summary { cursor: pointer; font-weight: 600; }
 details p { margin-top: 8px; color: var(--text-2); font-variation-settings: 'ROND' 0; }
 
