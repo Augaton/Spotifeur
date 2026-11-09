@@ -75,13 +75,13 @@ function board(name,w,h,x,y) {
   return b;
 }
 function phone(parent,name,file,x,y,screenWidth) {
-  const bezel=12, h=screenWidth*1200/537;
-  const g=new sketch.Group({parent,name:'Phone / '+name,frame:R(x,y,screenWidth+24,h+24)});
-  rectangle(g,'Frame',0,0,screenWidth+24,h+24,58,C.raised,{
-    borders:[{color:'#526158',thickness:2,position:'Inside'}],
-    shadows:[{color:'#00000066',blur:38,x:0,y:22}]});
-  rectangle(g,'Inner bezel',4,4,screenWidth+16,h+16,54,'#080B09');
-  const clip=rectangle(g,'Screen mask',bezel,bezel,screenWidth,h,46,'#000000');
+  const scale=screenWidth/440, bezel=12*scale, h=screenWidth*1200/537;
+  const g=new sketch.Group({parent,name:'Phone / '+name,frame:R(x,y,screenWidth+24*scale,h+24*scale)});
+  rectangle(g,'Frame',0,0,screenWidth+24*scale,h+24*scale,58*scale,C.raised,{
+    borders:[{color:'#526158',thickness:2*scale,position:'Inside'}],
+    shadows:[{color:'#00000066',blur:38*scale,x:0,y:22*scale}]});
+  rectangle(g,'Inner bezel',4*scale,4*scale,screenWidth+16*scale,h+16*scale,54*scale,'#080B09');
+  const clip=rectangle(g,'Screen mask',bezel,bezel,screenWidth,h,46*scale,'#000000');
   clip.masksSiblings=true;clip.maskMode=sketch.Layer.MaskMode.Outline;
   new sketch.Image({parent:g,name:'Screenshot / '+file+'.jpg',
     image:root+'/docs/assets/img/screens/'+file+'.jpg',frame:R(bezel,bezel,screenWidth,h)});
@@ -112,10 +112,11 @@ const bannerBG=new sketch.Group({parent:banner,name:'Background / Expressive sha
 rectangle(bannerBG,'Jade pill',-350,370,1000,470,235,gradient(C.container,C.deep));
 cookie(bannerBG,'Cookie / Top right',1040,-210,550,C.container,C.deep);
 rectangle(bannerBG,'Lavender accent',1110,470,170,42,21,C.lavender).transform.rotation=-24;
-logo(banner,132,201,210);
-text(banner,'Name','Spotifeur',397,204,112,C.text,780);
-text(banner,'Description','Open-source music player for Android',402,350,29,C.secondary,500);
-text(banner,'Sources','Spotify · YouTube Music · Local files',402,398,27,C.jade,500);
+logo(banner,76,224,152);
+text(banner,'Name','Spotifeur',268,216,96,C.text,780);
+text(banner,'Description','Open-source music player for Android',270,344,27,C.secondary,500);
+text(banner,'Sources','Spotify · YouTube Music · Local files',270,389,25,C.jade,500);
+phone(banner,'Player','player',930,40,244);
 
 preview('preview-listening',['home','player','lyrics','queue'],['Home','Player','Lyrics','Queue'],0,840,false);
 preview('preview-library',['album','playlist','settings','appearance'],['Album','Playlist','Settings','Appearance'],2600,840,true);

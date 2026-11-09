@@ -1,6 +1,6 @@
 # Spotifeur
 
-<p align="center"><img src="docs/assets/img/banner.png" alt="Spotifeur — open-source music player for Android for Spotify, YouTube Music and local files" width="1200"></p>
+<p align="center"><img src="docs/assets/img/banner.png" alt="Spotifeur — open-source music player for Android for Spotify, YouTube Music and local files, with a preview of the player" width="1200"></p>
 
 [Download APK](https://github.com/jean-voila/Spotifeur/releases/latest) · [Website](https://jean-voila.github.io/Spotifeur/) · [FAQ](docs/FAQ.md) · [Build from source](#build-and-contribute) · [Protocol notes](protocol/)
 
