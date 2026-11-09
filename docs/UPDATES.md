@@ -85,11 +85,19 @@ adb shell am instrument -w -r -e spotifeurUpdateUi true \
 ```
 
 The full install path needs an older installed build and a newer public GitHub
-release signed with the same key. Until that combination has been exercised, it is
-implemented and statically checked, rather than claimed as live validated.
+release signed with the same key.
 
-**Live, 2026-11-09:** the release dialog fixture passes on the phone, including
+**Pre-release live checks, 2026-11-09:** the release dialog fixture passes on the phone, including
 notes, the Update action and Later dismissal. A manual check against the public
 GitHub API reports the installed v1.2.3 as current. The main app is installed with
 its existing signing certificate and keeps its Premium session; the separate
-Free-account installation keeps its own session. No GitHub release was published.
+Free-account installation keeps its own session. No GitHub release had been published
+at this stage.
+
+**Live after publication, 2026-11-09:** the installed v1.2.3 detects the public
+v1.2.4 release, displays its real notes, downloads its APK from GitHub, verifies it
+and reaches Android's confirmation through the per-app installation permission
+screen. Confirming installs v1.2.4 (version code 18) with the existing signing
+certificate, retaining the Premium session, library and downloads. The GitHub
+asset digest matches the locally verified release APK. The reminder test also
+checks the persisted dismissal version/time and the exact 24-hour boundary.
