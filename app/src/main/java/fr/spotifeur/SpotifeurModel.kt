@@ -644,15 +644,20 @@ class SpotifeurModel(private val app: Application) : AndroidViewModel(app) {
         if (tracks.none { it.id.startsWith(fr.spotifeur.data.SPOTIFY_LOCAL_PREFIX) || (it.isLocalTrack && it.mediaUri == null) }) return tracks
         val files = mutableLocalTracks.value
         val byId = files.associateBy(Music::id)
+        val index = localFileIndex(files)
         return tracks.map { track ->
             when {
                 track.mediaUri != null -> track
-                track.id.startsWith(fr.spotifeur.data.LOCAL_TRACK_PREFIX) -> byId[track.id] ?: fr.spotifeur.data.matchLocalFile(track, files)
+                track.id.startsWith(fr.spotifeur.data.LOCAL_TRACK_PREFIX) -> byId[track.id] ?: index.match(track)
                     ?.let { track.copy(mediaUri = it.mediaUri, imageUrl = track.imageUrl ?: it.imageUrl) } ?: track
-                else -> fr.spotifeur.data.withLocalFile(track, files)
+                else -> fr.spotifeur.data.withLocalFile(track, index)
             }
         }
     }
+    @Volatile private var cachedFileIndex: fr.spotifeur.data.LocalFileIndex? = null
+    /** Built once per list of device files, reused by every playlist and queue. */
+    private fun localFileIndex(files: List<Music>): fr.spotifeur.data.LocalFileIndex =
+        cachedFileIndex?.takeIf { it.files === files } ?: fr.spotifeur.data.LocalFileIndex(files).also { cachedFileIndex = it }
     fun consumeMessage() { mutableMessage.value = null }
 
     fun search(query: String, debounce: Boolean = true) {

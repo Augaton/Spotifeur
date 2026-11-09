@@ -50,26 +50,32 @@ private fun audioFormatName(subtype: String): String = when (subtype.lowercase()
  * The device file a reference points to (a Spotify playlist's local file, or a CSV line): same
  * title, and the same artist or duration.
  */
-internal fun matchLocalFile(reference: Music, files: List<Music>): Music? {
-    val normalize = fr.spotifeur.data.youtube.TrackMatcher::normalize
-    val title = normalize(reference.title)
-    if (title.isEmpty()) return null
-    val artist = normalize(reference.subtitle)
-    return files.filter { normalize(it.title) == title }.maxByOrNull { file ->
-        val sameArtist = artist.isNotEmpty() && normalize(file.subtitle).let { it == artist || it.contains(artist) || artist.contains(it) && it.isNotEmpty() }
-        val closeDuration = reference.durationMs > 0 && file.durationMs > 0 && kotlin.math.abs(reference.durationMs - file.durationMs) <= 3_000
-        (if (sameArtist) 2 else 0) + (if (closeDuration) 1 else 0) + (if (artist.isEmpty()) 1 else 0)
-    }?.takeIf { file ->
-        val sameArtist = artist.isEmpty() || normalize(file.subtitle).let { it.isNotEmpty() && (it == artist || it.contains(artist) || artist.contains(it)) }
-        val closeDuration = reference.durationMs > 0 && file.durationMs > 0 && kotlin.math.abs(reference.durationMs - file.durationMs) <= 3_000
-        sameArtist || closeDuration
+internal fun matchLocalFile(reference: Music, files: List<Music>): Music? = LocalFileIndex(files).match(reference)
+
+/** The device's files by normalized title, built once per file list: matching a playlist then costs one lookup per entry. */
+internal class LocalFileIndex(val files: List<Music>) {
+    private class Entry(val file: Music, val artist: String)
+    private val normalize = fr.spotifeur.data.youtube.TrackMatcher::normalize
+    private val byTitle: Map<String, List<Entry>> = files.groupBy({ normalize(it.title) }) { Entry(it, normalize(it.subtitle)) }
+
+    fun match(reference: Music): Music? {
+        val title = normalize(reference.title)
+        if (title.isEmpty()) return null
+        val artist = normalize(reference.subtitle)
+        fun sameArtist(entry: Entry) = entry.artist.isNotEmpty() && (entry.artist == artist || entry.artist.contains(artist) || artist.contains(entry.artist))
+        fun closeDuration(file: Music) = reference.durationMs > 0 && file.durationMs > 0 && kotlin.math.abs(reference.durationMs - file.durationMs) <= 3_000
+        return byTitle[title].orEmpty().maxByOrNull { entry ->
+            (if (artist.isNotEmpty() && sameArtist(entry)) 2 else 0) + (if (closeDuration(entry.file)) 1 else 0) + (if (artist.isEmpty()) 1 else 0)
+        }?.takeIf { entry -> artist.isEmpty() || sameArtist(entry) || closeDuration(entry.file) }?.file
     }
 }
 
 /** A reference with the device file it points to, so it plays; unchanged when there is none. */
-internal fun withLocalFile(reference: Music, files: List<Music>): Music {
+internal fun withLocalFile(reference: Music, files: List<Music>): Music = withLocalFile(reference, LocalFileIndex(files))
+
+internal fun withLocalFile(reference: Music, index: LocalFileIndex): Music {
     if (!reference.id.startsWith(SPOTIFY_LOCAL_PREFIX) || reference.mediaUri != null) return reference
-    val file = matchLocalFile(reference, files) ?: return reference
+    val file = index.match(reference) ?: return reference
     return reference.copy(mediaUri = file.mediaUri, imageUrl = reference.imageUrl ?: file.imageUrl,
         durationMs = file.durationMs.takeIf { it > 0 } ?: reference.durationMs, quality = file.quality)
 }

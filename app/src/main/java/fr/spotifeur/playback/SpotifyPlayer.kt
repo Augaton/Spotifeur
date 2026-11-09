@@ -60,14 +60,31 @@ class SpotifyPlayer(context: Context, scope: CoroutineScope) : AutoCloseable {
     private val future = MediaController.Builder(context,
         SessionToken(context, ComponentName(context, SpotifeurPlaybackService::class.java))).buildAsync()
     private val listener = object : Player.Listener {
-        override fun onEvents(player: Player, events: Player.Events) { update(player) }
+        override fun onEvents(player: Player, events: Player.Events) {
+            if (events.contains(Player.EVENT_TIMELINE_CHANGED)) queueChanged = true
+            update(player)
+        }
     }
+    /**
+     * The queue as [Music], rebuilt only when the timeline changes. A long queue (a playlist of
+     * a few thousand tracks) would otherwise be converted and compared on the main thread at every
+     * position tick and player event, delaying taps and track changes.
+     */
+    private var queue: List<Music> = emptyList()
+    private var queueChanged = true
+    /**
+     * The player holds a window of the context around the current track, as Spotify's own player
+     * does: a few thousand media items would make every timeline change slow to copy between the
+     * controller and the session. The rest of the context waits here and is added as playback moves.
+     */
+    private var before: List<Music> = emptyList()
+    private var after: List<Music> = emptyList()
     init {
         ShuffleMemory.load(appContext)
         future.addListener({
             try {
                 controller = future.get().also { it.addListener(listener) }
-                pending?.let { (queue, index) -> pending = null; play(queue, index) } ?: controller?.let(::update)
+                pending?.let { (queue, index) -> pending = null; load(queue, index) } ?: controller?.let(::update)
             } catch (_: Exception) { mutableState.value = mutableState.value.copy(buffering = false, error = "The player could not start.") }
         }, ContextCompat.getMainExecutor(context))
         scope.launch { while (true) { delay(300); controller?.let(::update) } }
@@ -81,9 +98,50 @@ class SpotifyPlayer(context: Context, scope: CoroutineScope) : AutoCloseable {
         ShuffleMemory.original = playable.takeIf { ShuffleMemory.enabled }
         val tracks = if (ShuffleMemory.enabled) listOf(playable[first]) + (playable.take(first) + playable.drop(first + 1)).shuffled() else playable
         val start = if (ShuffleMemory.enabled) 0 else first
-        mutableState.value = Playback(tracks, start, buffering = true, durationMs = selected.durationMs, shuffle = ShuffleMemory.enabled, canNext = start < tracks.lastIndex)
-        val player = controller ?: run { pending = tracks to start; return }
-        player.setMediaItems(tracks.map(::mediaItem), start, 0L); player.prepare(); player.play()
+        mutableState.value = Playback(window(tracks, start).first, start - windowStart(start), buffering = true,
+            durationMs = selected.durationMs, shuffle = ShuffleMemory.enabled, canNext = start < tracks.lastIndex)
+        if (controller == null) { pending = tracks to start; return }
+        load(tracks, start)
+    }
+    private fun windowStart(start: Int) = (start - WINDOW_BEHIND).coerceAtLeast(0)
+    /** The part of [tracks] the player holds when [start] plays, and what stays out before and after it. */
+    private fun window(tracks: List<Music>, start: Int): Triple<List<Music>, List<Music>, List<Music>> {
+        val from = windowStart(start)
+        val to = (start + WINDOW_AHEAD + 1).coerceAtMost(tracks.size)
+        return Triple(tracks.subList(from, to).toList(), tracks.subList(0, from).toList(), tracks.subList(to, tracks.size).toList())
+    }
+    private fun load(tracks: List<Music>, start: Int) {
+        val player = controller ?: return
+        val (shown, earlier, later) = window(tracks, start)
+        before = earlier; after = later
+        queueChanged = true
+        player.setMediaItems(shown.map(::mediaItem), start - windowStart(start), 0L); player.prepare(); player.play()
+    }
+    /** The whole context and the position of the current track in it. */
+    fun context(): Pair<List<Music>, Int> = (before + queue) + after to before.size + mutableState.value.index
+    /** Keeps a margin of tracks on both sides of the current one, and the player small. */
+    private fun refill(player: Player) {
+        val count = player.mediaItemCount
+        if (count == 0) return
+        val current = player.currentMediaItemIndex
+        if (count - 1 - current < REFILL_AT) {
+            // With "repeat all", the start of the context follows its end.
+            val source = if (after.isEmpty() && player.repeatMode == Player.REPEAT_MODE_ALL) before else after
+            if (source.isNotEmpty()) {
+                val chunk = source.take(CHUNK)
+                if (source === after) after = after.drop(CHUNK) else before = before.drop(CHUNK)
+                player.addMediaItems(chunk.map(::mediaItem)); queueChanged = true
+            }
+        }
+        if (current < REFILL_AT && before.isNotEmpty()) {
+            val chunk = before.takeLast(CHUNK)
+            before = before.dropLast(CHUNK)
+            player.addMediaItems(0, chunk.map(::mediaItem)); queueChanged = true
+        } else if (current > WINDOW_BEHIND + CHUNK) {
+            val dropped = (0 until current - WINDOW_BEHIND).map { music(player.getMediaItemAt(it)) }
+            before = before + dropped
+            player.removeMediaItems(0, dropped.size); queueChanged = true
+        }
     }
     fun toggle() {
         val player = controller ?: return
@@ -97,8 +155,8 @@ class SpotifyPlayer(context: Context, scope: CoroutineScope) : AutoCloseable {
         if (failed) player.prepare()
     } }
     fun shuffle() { controller?.let { player ->
-        val items = (0 until player.mediaItemCount).map { music(player.getMediaItemAt(it)) }
-        val current = player.currentMediaItemIndex
+        val items = before + (0 until player.mediaItemCount).map { music(player.getMediaItemAt(it)) } + after
+        val current = before.size + player.currentMediaItemIndex
         ShuffleMemory.enabled = !ShuffleMemory.enabled
         ShuffleMemory.save(appContext)
         val original = ShuffleMemory.original
@@ -114,19 +172,25 @@ class SpotifyPlayer(context: Context, scope: CoroutineScope) : AutoCloseable {
                 if (position >= 0) replaceAroundCurrent(player, original.take(position), original.drop(position + 1))
             }
         }
+        queueChanged = true
         update(player)
     } }
     /** The current item is never removed, so its audio keeps playing while the queue changes around it. */
-    private fun replaceAroundCurrent(player: Player, before: List<Music>, after: List<Music>) {
+    private fun replaceAroundCurrent(player: Player, earlier: List<Music>, later: List<Music>) {
         val current = player.currentMediaItemIndex
         if (current + 1 < player.mediaItemCount) player.removeMediaItems(current + 1, player.mediaItemCount)
         if (current > 0) player.removeMediaItems(0, current)
-        if (after.isNotEmpty()) player.addMediaItems(1, after.map(::mediaItem))
-        if (before.isNotEmpty()) player.addMediaItems(0, before.map(::mediaItem))
+        val shownAfter = later.take(WINDOW_AHEAD)
+        val shownBefore = earlier.takeLast(WINDOW_BEHIND)
+        before = earlier.dropLast(WINDOW_BEHIND); after = later.drop(WINDOW_AHEAD)
+        if (shownAfter.isNotEmpty()) player.addMediaItems(1, shownAfter.map(::mediaItem))
+        if (shownBefore.isNotEmpty()) player.addMediaItems(0, shownBefore.map(::mediaItem))
     }
     fun repeat() { controller?.let { it.repeatMode = (it.repeatMode + 1) % 3 } }
     fun stop() {
         pending = null; ShuffleMemory.original = null
+        queueChanged = true
+        before = emptyList(); after = emptyList()
         controller?.stop(); controller?.clearMediaItems(); mutableState.value = Playback(shuffle = ShuffleMemory.enabled)
     }
     fun pause() { controller?.pause() }
@@ -142,25 +206,36 @@ class SpotifyPlayer(context: Context, scope: CoroutineScope) : AutoCloseable {
         val valid = tracks.filter(Music::isPlayableTrack)
         if (valid.isEmpty()) return
         ShuffleMemory.original = ShuffleMemory.original?.plus(valid)
-        controller?.let { it.addMediaItems(index.coerceIn(0, it.mediaItemCount), valid.map(::mediaItem)); update(it) }
+        controller?.let {
+            // "Add to queue" goes after the whole context, as before the queue was windowed.
+            if (index >= it.mediaItemCount && after.isNotEmpty()) after = after + valid
+            else it.addMediaItems(index.coerceIn(0, it.mediaItemCount), valid.map(::mediaItem))
+            queueChanged = true; update(it)
+        }
     }
     fun removeAt(index: Int) { controller?.let { player ->
         val id = player.getMediaItemAt(index).mediaId
         ShuffleMemory.original = ShuffleMemory.original?.let { list ->
             list.indexOfFirst { it.id == id }.let { found -> if (found < 0) list else list.take(found) + list.drop(found + 1) }
         }
-        player.removeMediaItem(index); update(player)
+        player.removeMediaItem(index); queueChanged = true; update(player)
     } }
-    fun move(from: Int, to: Int) { controller?.let { it.moveMediaItem(from, to); update(it) } }
+    fun move(from: Int, to: Int) { controller?.let { it.moveMediaItem(from, to); queueChanged = true; update(it) } }
     fun clearExceptCurrent() { controller?.let { player ->
         val current = player.currentMediaItemIndex
         if (current + 1 < player.mediaItemCount) player.removeMediaItems(current + 1, player.mediaItemCount)
         if (current > 0) player.removeMediaItems(0, current)
         ShuffleMemory.original = null
+        before = emptyList(); after = emptyList()
+        queueChanged = true
         update(player)
     } }
     private fun update(player: Player) {
-        val queue = (0 until player.mediaItemCount).map { music(player.getMediaItemAt(it)) }
+        refill(player)
+        if (queueChanged || queue.size != player.mediaItemCount) {
+            queue = (0 until player.mediaItemCount).map { music(player.getMediaItemAt(it)) }
+            queueChanged = false
+        }
         val index = player.currentMediaItemIndex.coerceAtLeast(0)
         val duration = player.duration.takeUnless { it == C.TIME_UNSET || it < 0 }
             ?: queue.getOrNull(index)?.durationMs?.toLong() ?: 0
@@ -172,7 +247,13 @@ class SpotifyPlayer(context: Context, scope: CoroutineScope) : AutoCloseable {
         }
         mutableState.value = Playback(queue, index, player.isPlaying, player.playbackState == Player.STATE_BUFFERING,
             player.currentPosition.coerceIn(0, Int.MAX_VALUE.toLong()).toInt(), duration.coerceAtMost(Int.MAX_VALUE.toLong()).toInt(),
-            ShuffleMemory.enabled, player.repeatMode, error, player.hasNextMediaItem(), player.playWhenReady, currentAudioFormat(player))
+            ShuffleMemory.enabled, player.repeatMode, error, player.hasNextMediaItem() || after.isNotEmpty(), player.playWhenReady, currentAudioFormat(player))
+    }
+    private companion object {
+        const val WINDOW_BEHIND = 20
+        const val WINDOW_AHEAD = 100
+        const val REFILL_AT = 10
+        const val CHUNK = 50
     }
     override fun close() { controller?.removeListener(listener); MediaController.releaseFuture(future); controller = null }
 }

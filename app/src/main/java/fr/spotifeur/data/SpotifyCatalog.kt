@@ -86,7 +86,8 @@ internal class SpotifyCatalog(
         }
     }
 
-    private suspend fun fetchMetadata(uris: List<String>) {
+    // Decoding hundreds of entities is CPU work: keep it off the caller's (often main) thread.
+    private suspend fun fetchMetadata(uris: List<String>): Unit = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) {
         val body = proto {
             uris.forEach { uri ->
                 val kind = metadataKind(uri) ?: return@forEach

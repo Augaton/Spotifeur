@@ -356,6 +356,7 @@ class PlayerViewModel(val model: SpotifeurModel, private val scope: CoroutineSco
     fun showAndPlaySong(song: Song, contextSongs: List<Song>, queueName: String = "", indexInQueue: Int? = null) {
         val state = model.player.state.value
         val displayIndex = indexInQueue ?: contextSongs.indexOfFirst { it.id == song.id }
+        // The live queue sheet shows the player's window: a tap in it moves within that window.
         if (displayIndex >= 0 && state.queue.size == contextSongs.size && state.queue.map(Music::id) == contextSongs.map(Song::id)) {
             model.player.seekToItem(displayIndex)
             return
@@ -461,7 +462,8 @@ class PlayerViewModel(val model: SpotifeurModel, private val scope: CoroutineSco
 
     fun dismissPlaylistAndShowUndo() {
         val state = model.player.state.value
-        dismissed = Triple(state.queue, state.index, state.positionMs)
+        val (context, index) = model.player.context()
+        dismissed = Triple(context, index, state.positionMs)
         model.player.stop()
         mutableMiniDismissing.value = false
         mutableUi.update { it.copy(showDismissUndoBar = true) }

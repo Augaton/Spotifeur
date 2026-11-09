@@ -76,7 +76,7 @@ object TrackMatcher {
     internal fun artistSimilarity(wanted: String, found: String, foundTitle: String): Double {
         val names = wanted.split(",", "&", " feat.", " ft.", " x ").map { normalize(it) }.filter(String::isNotEmpty)
         if (names.isEmpty()) return 0.5
-        val channel = normalize(found.replace(Regex("(?i)vevo|- topic|official"), " "))
+        val channel = normalize(found.replace(CHANNEL_NOISE, " "))
         val haystack = "$channel ${normalize(foundTitle)}"
         val primary = names.first()
         return when {
@@ -97,15 +97,15 @@ object TrackMatcher {
     }
 
     internal fun normalize(text: String): String = Normalizer.normalize(text.lowercase(), Normalizer.Form.NFD)
-        .replace(Regex("\\p{Mn}+"), "")
+        .replace(MARKS, "")
         .replace("&", " and ")
-        .replace(Regex("[^\\p{L}\\p{N}]+"), " ")
+        .replace(SEPARATORS, " ")
         .trim()
 
     /** "Song - Remastered 2011", "Song (feat. X)" and "Song [Live]" all compare as "Song". */
     internal fun String.coreTitle(): String = replace(PARENTHETICALS, " ")
-        .replace(Regex("""\s+-\s+.*$"""), " ")
-        .replace(Regex("""(?i)\s(feat|ft)\.?\s.*$"""), " ")
+        .replace(DASH_SUFFIX, " ")
+        .replace(FEATURING, " ")
         .trim().ifEmpty { this }
 
     private fun String.searchTitle(): String = coreTitle()
@@ -135,6 +135,12 @@ object TrackMatcher {
     }
 
     private val PARENTHETICALS = Regex("""[(\[][^)\]]*[)\]]""")
+    // Compiled once: normalize runs for every local file and every candidate.
+    private val CHANNEL_NOISE = Regex("(?i)vevo|- topic|official")
+    private val MARKS = Regex("\\p{Mn}+")
+    private val SEPARATORS = Regex("[^\\p{L}\\p{N}]+")
+    private val DASH_SUFFIX = Regex("""\s+-\s+.*$""")
+    private val FEATURING = Regex("""(?i)\s(feat|ft)\.?\s.*$""")
     private const val ACCEPTED = 0.55
     private const val CONFIDENT = 0.8
     private const val MIN_TITLE = 0.45
