@@ -194,13 +194,16 @@ internal fun parseMediaPlaylist(text: String, playlistUrl: String): Pair<AudioFi
  * A variant with stored bytes wins (offline playback depends on it); otherwise the highest bandwidth not above
  * [targetBandwidth], or the lowest one when every variant is above it.
  */
-internal fun selectVariant(master: String, targetBandwidth: Long = Long.MAX_VALUE, preference: (variantUri: String, bandwidth: Long) -> Long): String {
+internal fun selectVariant(master: String, targetBandwidth: Long = Long.MAX_VALUE, maximumBandwidth: Long = Long.MAX_VALUE, preference: (variantUri: String, bandwidth: Long) -> Long): String {
     val lines = master.lines()
     val variants = lines.indices.filter { lines[it].startsWith("#EXT-X-STREAM-INF") && it + 1 < lines.size && !lines[it + 1].startsWith("#") }
-    if (variants.size < 2) return master
+    if (variants.isEmpty()) return master
     fun bandwidth(index: Int) = Regex("(?:^|[:,])BANDWIDTH=(\\d+)").find(lines[index])?.groupValues?.get(1)?.toLongOrNull() ?: 0
     fun fit(index: Int) = bandwidth(index).let { if (it <= targetBandwidth) it else -it }
-    val best = variants.maxWith(compareBy({ preference(lines[it + 1].trim(), bandwidth(it)) }, { fit(it) }))
+    // A cached high-quality file from another account must not override the current grant.
+    val allowed = variants.filter { bandwidth(it) <= maximumBandwidth }
+    if (allowed.isEmpty()) throw SpotifyFailure("No audio variant is available for this account.")
+    val best = allowed.maxWith(compareBy({ preference(lines[it + 1].trim(), bandwidth(it)) }, { fit(it) }))
     val dropped = variants.filter { it != best }.flatMap { listOf(it, it + 1) }.toSet()
     return lines.filterIndexed { index, _ -> index !in dropped }.joinToString("\n")
 }

@@ -47,6 +47,35 @@ The master playlist lists variants. For music it holds two AAC-LC variants (`COD
 
 `p.s6z0.apply` and `yt91.b` choose the DRM provider by policy: OFF and VIDEO keep the standard Widevine provider (`bih1.b`); AUDIO and ALL select the custom provider (`swm0.b` → `ppt0`). The official app plays music through **mode 4**.
 
+### Account quality and Free playback
+
+**Live, 2026-11-09:** the connected Premium account reports `type=premium`,
+`catalogue=premium`, `audio-quality=2`. A newly created Free account reports
+`type=free`, `catalogue=free`, `audio-quality=0`, with a `player-license` present.
+On the Free account, AAC 128 kbit/s produces decoded PCM after the clear lead-in
+and after a seek. Preparing an AAC 256 kbit/s file through the same native engine
+gets HTTP 403 from `playplay/v1/key/{file_id}`, then the codec reports a preparation
+failure when it reaches encrypted samples. A full manifest and ten seconds of sound
+therefore do not establish authorization for every variant in that manifest.
+
+**Implementation:** quality 0 limits variant selection to 128 kbit/s before cache
+preference is applied. Quality 2 retains the existing 128/256 selection. The same
+selection is used for streaming, prefetch and downloads; the stored user setting
+is unchanged. The account policy is refreshed for a new session and retained per
+account for offline startup. No other attribute values have been measured.
+
+**Live after the selection change:** on this Free account, both quality presets
+produce PCM at 128 kbit/s past the lead-in and after seeks. A two-track test also
+measures PCM after an automatic transition. The real playback service passes
+pause/resume, shuffle/repeat, seek, next and background checks, with PCM measured
+past the lead-in and after seeks. Two explicit downloads play encrypted samples
+after the app/native HTTP paths are disabled, including seeks and a track change.
+A fresh process also plays those downloads with these HTTP paths disabled, past
+the lead-in on both tracks. This last test uses the app's offline test hooks,
+not an APK without the Android INTERNET permission. Free-account library writes
+and the complete playlist lifecycle (including cover and recommendations) pass,
+with temporary favorites and playlists removed afterwards.
+
 ### Mode 1 is not enough
 
 **Live:** with the platform Widevine CDM, mode 1 plays the unencrypted lead-in (about 10 s), then the encrypted part decodes to invalid AAC frames that Android replaces with silence. Position, `PLAYING` state and buffer level all look normal. Only measuring the decoded PCM reveals the problem. Mode 4 with the native engine is the path that produces signal past the lead-in.

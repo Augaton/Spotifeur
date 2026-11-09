@@ -28,9 +28,18 @@ class AudioQualitySignalTest {
         val ins = InstrumentationRegistry.getInstrumentation()
         val app = ins.targetContext
         val session = SpotifyAccount.require(app)
-        val saved = SpotifyLibrary(SpotifyAccount.transport, session, SpotifyCatalog(SpotifyAccount.transport, session)).load()
-            .savedTracks.filter { it.durationMs > 90_000 }
+        val catalog = SpotifyCatalog(SpotifyAccount.transport, session)
+        val requested = InstrumentationRegistry.getArguments().getString("spotifyTrackUris")
+            ?.split(',')?.filter(String::isNotBlank)
+        val saved = (if (requested != null) catalog.hydrate(requested)
+            else SpotifyLibrary(SpotifyAccount.transport, session, catalog).load().savedTracks)
+            .filter { it.durationMs > 90_000 }
+        InstrumentationRegistry.getArguments().getString("spotifyAccountType")?.let { expected ->
+            assertEquals("The intended account must be connected", expected,
+                spotifyAttribute(SpotifyAccount.transport, session, "type"))
+        }
         val store = SettingsStore.get(app)
+        val maximum = session.maximumAudioBandwidth()
         val original = store.settings.value
         val activity = ins.startActivitySync(Intent(app, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
         val native = NativeAudioProvider(app)
@@ -60,10 +69,10 @@ class AudioQualitySignalTest {
             val used = mutableSetOf<String>()
             for (quality in listOf(AudioQuality.NORMAL, AudioQuality.VERY_HIGH)) {
                 store.update { it.copy(streamingQualityWifi = quality.key, streamingQualityMobile = quality.key) }
-                val target = quality.bandwidth(metered = false)
+                val target = minOf(quality.bandwidth(metered = false), maximum)
                 // A track with a stored copy plays that copy whatever the setting: take one that has none.
                 val track = withContext(Dispatchers.IO) {
-                    saved.drop(20).filter { it.id !in used }.take(30).firstOrNull { candidate ->
+                    (if (requested != null) saved else saved.drop(20)).filter { it.id !in used }.take(30).firstOrNull { candidate ->
                         val master = http.manifest(candidate.id)
                         val kept = http.master(candidate.id, master)
                         Regex("BANDWIDTH=(\\d+)").find(kept)?.groupValues?.get(1)?.toLongOrNull() == target

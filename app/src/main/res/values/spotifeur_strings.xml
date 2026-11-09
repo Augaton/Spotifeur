@@ -240,11 +240,11 @@
     <string name="settings_quality_wifi_title">Streaming quality on Wi-Fi</string>
     <string name="settings_quality_mobile_title">Streaming quality on mobile data</string>
     <string name="settings_quality_download_title">Download quality</string>
-    <string name="settings_quality_description">Automatic: 256 kbit/s, or 128 kbit/s on a metered network.</string>
+    <string name="settings_quality_description">Automatic: up to 256 kbit/s, or 128 kbit/s on a metered network. Playback uses the quality available to your Spotify account.</string>
     <string name="settings_quality_download_description">Applies to new downloads. A track already on the device plays from its stored copy.</string>
     <string name="audio_quality_auto">Automatic</string>
     <string name="audio_quality_normal">Normal (AAC 128 kbit/s)</string>
-    <string name="audio_quality_very_high">Very high (AAC 256 kbit/s)</string>
+    <string name="audio_quality_very_high">Very high (up to AAC 256 kbit/s)</string>
     <string name="history_title">Listening history</string>
     <string name="history_today">Today</string>
     <string name="history_yesterday">Yesterday</string>

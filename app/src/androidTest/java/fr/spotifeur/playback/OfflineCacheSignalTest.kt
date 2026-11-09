@@ -39,6 +39,18 @@ class OfflineCacheSignalTest {
     private val app get() = InstrumentationRegistry.getInstrumentation().targetContext
     private val tracksFile get() = File(app.noBackupFilesDir, "offline-test-tracks.json")
 
+    private suspend fun testTracks(session: SpotifySession): List<Music> {
+        val catalog = SpotifyCatalog(SpotifyAccount.transport, session)
+        val requested = InstrumentationRegistry.getArguments().getString("spotifyTrackUris")
+            ?.split(',')?.filter(String::isNotBlank)
+        InstrumentationRegistry.getArguments().getString("spotifyAccountType")?.let { expected ->
+            assertEquals(expected, spotifyAttribute(SpotifyAccount.transport, session, "type"))
+        }
+        return (if (requested != null) catalog.hydrate(requested)
+            else SpotifyLibrary(SpotifyAccount.transport, session, catalog).load().savedTracks)
+            .filter { it.durationMs in 90_000..240_000 }.take(2)
+    }
+
     private suspend fun controller(): MediaController = withContext(Dispatchers.Main) {
         val future = MediaController.Builder(app, SessionToken(app, ComponentName(app, SpotifeurPlaybackService::class.java))).buildAsync()
         val main = Executor { ContextCompat.getMainExecutor(app).execute(it) }
@@ -68,8 +80,7 @@ class OfflineCacheSignalTest {
     @Test fun fill(): Unit = runBlocking {
         assumeTrue(InstrumentationRegistry.getArguments().getString("spotifyOfflinePhase") == "fill")
         val session = SpotifyAccount.require(app)
-        val tracks = SpotifyLibrary(SpotifyAccount.transport, session, SpotifyCatalog(SpotifyAccount.transport, session)).load()
-            .savedTracks.filter { it.durationMs in 90_000..240_000 }.take(2)
+        val tracks = testTracks(session)
         assertEquals(2, tracks.size)
         tracksFile.writeText(encodePins(tracks))
         AudioCache.remove(app, tracks.map(Music::id))
@@ -115,8 +126,7 @@ class OfflineCacheSignalTest {
     @Test fun downloads(): Unit = runBlocking {
         assumeTrue(InstrumentationRegistry.getArguments().getString("spotifyOfflinePhase") == "downloads")
         val session = SpotifyAccount.require(app)
-        val tracks = SpotifyLibrary(SpotifyAccount.transport, session, SpotifyCatalog(SpotifyAccount.transport, session)).load()
-            .savedTracks.filter { it.durationMs in 90_000..240_000 }.take(2)
+        val tracks = testTracks(session)
         assertEquals(2, tracks.size)
         tracksFile.writeText(encodePins(tracks))
         AudioCache.remove(app, tracks.map(Music::id))

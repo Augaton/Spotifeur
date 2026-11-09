@@ -29,6 +29,11 @@ import fr.spotifeur.utils.AppLocales
 class MainActivity : ComponentActivity() {
     override fun attachBaseContext(newBase: Context) = super.attachBaseContext(AppLocales.wrap(newBase))
 
+    override fun onStart() {
+        super.onStart()
+        fr.spotifeur.update.AppUpdater.get(this).check()
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
@@ -91,6 +96,7 @@ class MainActivity : ComponentActivity() {
                     fr.spotifeur.presentation.components.LocalTrackSwipe provides swipe,
                 ) {
                     SpotifeurMain(model)
+                    fr.spotifeur.update.UpdatePrompt()
                 }
             }
         }

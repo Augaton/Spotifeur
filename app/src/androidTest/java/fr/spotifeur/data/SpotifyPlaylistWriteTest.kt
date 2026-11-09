@@ -20,7 +20,8 @@ class SpotifyPlaylistWriteTest {
         val session = SpotifyAccount.require(app)
         val catalog = SpotifyCatalog(SpotifyAccount.transport, session)
         val library = SpotifyLibrary(SpotifyAccount.transport, session, catalog).load()
-        val tracks = library.savedTracks.take(2)
+        val requested = InstrumentationRegistry.getArguments().getString("spotifyTrackUris")?.split(',')
+        val tracks = (if (requested != null) catalog.hydrate(requested) else library.savedTracks).take(2)
         assertEquals(2, tracks.size)
         val service = SpotifyPlaylists(app)
         // Clean remnants of interrupted earlier runs of this explicitly named test.

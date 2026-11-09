@@ -240,11 +240,11 @@
     <string name="settings_quality_wifi_title">Qualité en streaming sur Wi-Fi</string>
     <string name="settings_quality_mobile_title">Qualité en streaming sur données mobiles</string>
     <string name="settings_quality_download_title">Qualité des téléchargements</string>
-    <string name="settings_quality_description">Automatique : 256 kbit/s, ou 128 kbit/s sur un réseau limité.</string>
+    <string name="settings_quality_description">Automatique : jusqu’à 256 kbit/s, ou 128 kbit/s sur un réseau limité. La lecture utilise la qualité disponible pour votre compte Spotify.</string>
     <string name="settings_quality_download_description">S’applique aux nouveaux téléchargements. Un titre déjà présent sur l’appareil est lu depuis sa copie.</string>
     <string name="audio_quality_auto">Automatique</string>
     <string name="audio_quality_normal">Normale (AAC 128 kbit/s)</string>
-    <string name="audio_quality_very_high">Très élevée (AAC 256 kbit/s)</string>
+    <string name="audio_quality_very_high">Très élevée (jusqu’à AAC 256 kbit/s)</string>
     <string name="history_title">Historique d’écoute</string>
     <string name="history_today">Aujourd’hui</string>
     <string name="history_yesterday">Hier</string>

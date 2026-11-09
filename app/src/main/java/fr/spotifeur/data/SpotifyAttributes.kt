@@ -2,6 +2,10 @@ package fr.spotifeur.data
 
 import okhttp3.Request
 
+/** Live: quality 0 can prepare AAC 128; AAC 256 returns 403. Quality 2 permits both. */
+internal fun accountAudioBandwidth(audioQuality: String?): Long =
+    if (audioQuality == "0") AudioQuality.NORMAL_BANDWIDTH else Long.MAX_VALUE
+
 /** Reads one attribute of the account, as the native session does when it starts. */
 internal suspend fun spotifyAttribute(transport: SpotifyTransport, session: SpotifySession, name: String): String? {
     val url = spotifyUrl("nebula/v1/configuration/attributes")

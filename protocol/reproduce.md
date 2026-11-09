@@ -83,6 +83,26 @@ To find a descriptor, search for its file name prefixed by a length byte, for ex
 
 ## Runtime measurements
 
+To test a Free account without replacing an existing installation, build with
+`-PspotifeurTestApplicationId=fr.spotifeur.freecheck`, install both APKs and sign in
+to the separate installation. The regular installation keeps its account and files.
+Use `fr.spotifeur.freecheck/fr.spotifeur.MainActivity` to launch it. Then run:
+
+```sh
+adb shell am instrument -w -r -e spotifyAudioStress true -e spotifyAccountType free \
+  -e spotifyTrackUris spotify:track:4uLU6hMCjMI75M1A2tKUQC,spotify:track:3n3Ppam7vgaVa1iaRUc9Lp \
+  -e class fr.spotifeur.playback.NativePlaybackSignalTest,fr.spotifeur.playback.AudioQualitySignalTest \
+  fr.spotifeur.freecheck.test/androidx.test.runner.AndroidJUnitRunner
+```
+
+These tests measure decoded PCM after the clear lead-in and seeks; the first also
+checks an automatic track transition. The quality test expects the requested level
+within the account's grant. `SpotifyEntitlementsDiagnosticTest` logs only a whitelist
+of non-secret attribute values; it never logs the playback license itself.
+`OfflineCacheSignalTest#downloads` accepts the same track/account arguments with
+`-e spotifyOfflinePhase downloads` to test downloaded audio after network cutoff.
+Build the regular app again without the application ID property when finished.
+
 ```sh
 adb shell dumpsys media.metrics
 adb shell dumpsys media_session

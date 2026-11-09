@@ -172,6 +172,10 @@ fun SettingsScreen(model: SpotifeurModel, navController: NavHostController) {
         CategoryRow(stringResource(R.string.settings_account_title),
             stringResource(if (discovery.spotifyEnabled) R.string.settings_account_subtitle else R.string.settings_account_guest_subtitle),
             Icons.AutoMirrored.Rounded.Logout) { open("account") }
+        val context = LocalContext.current
+        CategoryRow(stringResource(R.string.update_settings_title),
+            stringResource(R.string.update_installed, fr.spotifeur.BuildConfig.VERSION_NAME),
+            Icons.Rounded.Download) { fr.spotifeur.update.AppUpdater.get(context).check(manual = true) }
     }
 }
 

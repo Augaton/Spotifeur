@@ -145,7 +145,8 @@ internal class SpotifyHlsDataSource private constructor(
             val settings = fr.spotifeur.data.preferences.SettingsStore.get(app).settings.value
             val target = if (forDownloads) AudioQuality.of(settings.downloadQuality).bandwidth(metered = false)
                 else AudioQuality.of(if (metered()) settings.streamingQualityMobile else settings.streamingQualityWifi).bandwidth(metered())
-            return selectVariant(text, target) { variant, _ ->
+            val maximum = runBlocking { SpotifyAccount.require(app).maximumAudioBandwidth() }
+            return selectVariant(text, target, maximum) { variant, _ ->
                 base.resolve(variant)?.let { index.fileOfPlaylist(it.toString()) }?.let {
                     // A download keeps to its own copies; playback uses whatever is already on the device.
                     if (forDownloads) AudioCache.downloadedBytesOfFile(app, it.hex) else AudioCache.cachedBytesOfFile(app, it.hex)

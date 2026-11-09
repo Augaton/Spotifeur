@@ -21,6 +21,26 @@ internal class SpotifySession(
     private val login = Login5(transport, SpotifyAndroid.CLIENT_ID, deviceId)
     private var userGrant: LoginGrant? = null
     private var stored: StoredCredential? = null
+    private val audioPolicyLock = Mutex()
+    private var audioBandwidth: Long? = null
+
+    /** Keep the user's quality preference, but select a file this account can prepare. */
+    suspend fun maximumAudioBandwidth(): Long = audioPolicyLock.withLock {
+        audioBandwidth?.let { return@withLock it }
+        val account = username()
+        val preferences = context.getSharedPreferences("spotify_audio_policy", Context.MODE_PRIVATE)
+        val key = java.security.MessageDigest.getInstance("SHA-256").digest(account.toByteArray())
+            .joinToString("") { "%02x".format(it.toInt() and 255) }
+        val known = preferences.getLong(key, Long.MAX_VALUE)
+        if (!NetworkMonitor.online.value) return@withLock known
+        try {
+            val limit = accountAudioBandwidth(spotifyAttribute(transport, this, "audio-quality"))
+            preferences.edit().putLong(key, limit).apply()
+            audioBandwidth = limit
+            limit
+        } catch (auth: SpotifyAuthRequired) { throw auth }
+        catch (_: java.io.IOException) { known }
+    }
 
     class Headers(val client: String, val user: String)
     val deviceIdentifier: String get() = deviceId
@@ -65,6 +85,7 @@ internal class SpotifySession(
 
     /** Reopens the saved account without any request: tokens renew when a request first needs them. */
     suspend fun restore(credential: StoredCredential) = lock.withLock {
+        audioBandwidth = null
         stored = credential
         restoreTokens()
     }
@@ -104,6 +125,7 @@ internal class SpotifySession(
         save(login.restore(client().forHost("login5.spotify.com"), credential), credential)
 
     private fun save(grant: LoginGrant, previous: StoredCredential?): LoginGrant {
+        if (grant.credential?.username != null && grant.credential.username != stored?.username) audioBandwidth = null
         grant.credential?.let(vault::save)
         stored = grant.credential ?: previous
         userGrant = grant

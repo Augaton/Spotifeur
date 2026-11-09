@@ -26,14 +26,24 @@ class NativePlaybackSignalTest {
         val ins = InstrumentationRegistry.getInstrumentation()
         val app = ins.targetContext
         val session = SpotifyAccount.require(app)
-        val tracks = SpotifyLibrary(SpotifyAccount.transport, session, SpotifyCatalog(SpotifyAccount.transport, session)).load()
-            .savedTracks.filter { it.durationMs > 90_000 }.take(2)
+        val catalog = SpotifyCatalog(SpotifyAccount.transport, session)
+        val requested = InstrumentationRegistry.getArguments().getString("spotifyTrackUris")
+            ?.split(',')?.filter(String::isNotBlank)
+        // A new Free account need not have any saved tracks. Explicit fixtures avoid writes to its library.
+        val tracks = (if (requested != null) catalog.hydrate(requested)
+            else SpotifyLibrary(SpotifyAccount.transport, session, catalog).load().savedTracks)
+            .filter { it.durationMs > 90_000 }.take(2)
+        InstrumentationRegistry.getArguments().getString("spotifyAccountType")?.let { expected ->
+            assertEquals("The intended account must be connected", expected,
+                spotifyAttribute(SpotifyAccount.transport, session, "type"))
+        }
         assertEquals(2, tracks.size)
         val activity = ins.startActivitySync(Intent(app, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
         val native = NativeAudioProvider(app)
         val http = SpotifyHlsDataSource.Factory(app, nativeAudio = true)
         var player: ExoPlayer? = null
         suspend fun signal(label: String) {
+            delay(500) // Flush output from the previous seek or track before measuring.
             val before = PlaybackDiagnostics.nonSilentBuffers.get()
             withTimeout(35_000) {
                 while (PlaybackDiagnostics.nonSilentBuffers.get() < before + 20) {
@@ -68,6 +78,22 @@ class NativePlaybackSignalTest {
                     signal("seek $index/$fraction")
                 }
             }
+            // Exercise an automatic transition too, including the encrypted part of the next file.
+            withContext(Dispatchers.Main) {
+                player!!.setMediaSources(tracks.map { track ->
+                    HlsMediaSource.Factory(http).setExtractorFactory(NativeHlsExtractor(native))
+                        .createMediaSource(MediaItem.fromUri(track.id))
+                })
+                player!!.prepare()
+                player!!.seekTo(0, tracks.first().durationMs - 5_000L)
+                player!!.play()
+            }
+            signal("before transition")
+            withTimeout(35_000) {
+                while (withContext(Dispatchers.Main) { player!!.currentMediaItemIndex } != 1) delay(100)
+            }
+            delay(20_000)
+            signal("automatic transition past lead-in")
         } catch (error: Throwable) {
             Log.e("SpotifeurNativeTest", "Playback failure=" + generateSequence(error) { it.cause }.take(12).joinToString(">") {
                 it.javaClass.simpleName + if (it is NativeAudioException) ":${it.nativeCode ?: 0}" else ""

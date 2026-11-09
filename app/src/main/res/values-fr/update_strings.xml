@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="update_settings_title">Rechercher des mises à jour</string>
+    <string name="update_checking">Recherche de mises à jour…</string>
+    <string name="update_available">Mise à jour disponible</string>
+    <string name="update_installed">Version installée : %1$s</string>
+    <string name="update_action">Mettre à jour</string>
+    <string name="update_later">Plus tard</string>
+    <string name="update_close">Fermer</string>
+    <string name="update_cancel">Annuler</string>
+    <string name="update_retry">Réessayer</string>
+    <string name="update_release_page">Page de la version</string>
+    <string name="update_no_apk">Ouvrez la page de la version pour la télécharger.</string>
+    <string name="update_downloading">Téléchargement de la mise à jour</string>
+    <string name="update_progress">%1$s / %2$s Mo · %3$d%%</string>
+    <string name="update_downloaded">%1$s Mo téléchargés</string>
+    <string name="update_ready">Prête à installer</string>
+    <string name="update_install">Installer</string>
+    <string name="update_install_description">Android vous demandera de confirmer la mise à jour. Si nécessaire, autorisez Spotifeur à installer des applications et revenez ici pour continuer.</string>
+    <string name="update_failed_title">Mise à jour indisponible</string>
+    <string name="update_check_failed">Impossible de rechercher les mises à jour. Réessayez ou ouvrez la page de la version.</string>
+    <string name="update_download_failed">Impossible de télécharger ou de vérifier la mise à jour. Réessayez ou ouvrez la page de la version.</string>
+    <string name="update_current_title">Application à jour</string>
+    <string name="update_current_description">Spotifeur %1$s. Aucune version plus récente n’est disponible.</string>
+    <string name="update_notes_title">Nouveautés</string>
+</resources>

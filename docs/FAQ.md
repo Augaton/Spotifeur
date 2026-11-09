@@ -2,7 +2,7 @@
 
 ## Do I need a Spotify account?
 
-No. Without an account, Spotifeur plays the YouTube Music catalog and the audio files on your phone, and Spotify tracks of imported playlists play from their closest YouTube Music match. With an account, it shows your Spotify library and plays what your account is allowed to play. It was tested with a Premium account. Free accounts were not tested.
+No. Without an account, Spotifeur plays the YouTube Music catalog and the audio files on your phone, and Spotify tracks of imported playlists play from their closest YouTube Music match. With an account, it shows your Spotify library and plays what your account is allowed to play. Free and Premium accounts have been tested, including playlists and offline playback. The tested Free account supports AAC 128 kbit/s; Premium also supports AAC 256 kbit/s.
 
 ## Do I need the official Spotify app installed?
 
@@ -11,6 +11,10 @@ No. Spotifeur does not use the installed app. Spotify's audio engine, taken unch
 ## Where do I get the APK?
 
 From the [latest release](https://github.com/jean-voila/Spotifeur/releases/latest). Each release lists the SHA-256 of the APK and of its signing certificate. You can also build it yourself from the source and your own copy of the official APKM: see [Build from source](../README.md#build-from-source). A build you made yourself is signed with a different key, so uninstall the other one first (this erases the session and downloads).
+
+## How do application updates work?
+
+Spotifeur checks GitHub at startup. A newer release opens a dialog with release notes and a download button. Android confirms the installation. If you dismiss the dialog, the same release is offered again at the first startup at least 24 hours later. Settings → Check for updates checks immediately.
 
 ## Which Spotify version is needed?
 

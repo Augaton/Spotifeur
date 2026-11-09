@@ -4,6 +4,21 @@
 
 Nothing yet.
 
+## v1.2.4
+
+### Added
+
+- GitHub release checks at startup and from Settings, with release notes, an in-app APK download, progress, cancellation, verification and Android's installation confirmation. Installed release notes appear once after an upgrade.
+- Dismissing an update defers automatic reminders for that version for 24 hours, persisted across process restarts. The next startup after that delay offers it again. Manual checks bypass the delay, and a newer release can appear immediately.
+
+### Fixed
+
+- Spotify Free playback selects the AAC variant allowed by the account's `audio-quality` attribute for streaming and downloads. Quality 0 permits 128 kbit/s but the service refuses 256 kbit/s with HTTP 403; choosing the latter previously stopped audio after the clear lead-in. Cached variants cannot override this account limit. User quality preferences are retained.
+
+### Changed
+
+- Device signal tests accept explicit catalog track URIs and an expected account type, so new accounts can be tested without saving music. The playback test also measures decoded PCM past the clear lead-in after an automatic transition.
+
 ## v1.2.3
 
 ### Changed

@@ -17,11 +17,12 @@ android {
     compileSdk = 37
 
     defaultConfig {
-        applicationId = "fr.spotifeur"
+        // A separate installation keeps the regular account and downloads intact during device tests.
+        applicationId = providers.gradleProperty("spotifeurTestApplicationId").getOrElse("fr.spotifeur")
         minSdk = 26
         targetSdk = 36
-        versionCode = 17
-        versionName = "1.2.3"
+        versionCode = 18
+        versionName = "1.2.4"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         buildConfigField("boolean", "NATIVE_RUNTIME", nativeRuntime.toString())
         buildConfigField("boolean", "FORCE_OFFLINE", project.hasProperty("spotifeurNoInternet").toString())
