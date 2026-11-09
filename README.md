@@ -16,6 +16,15 @@ catalog without a Google account, and audio files on your phone. A Spotify
 account is optional. The interface uses Material 3 Expressive and is available
 in English and French.
 
+## What it looks like
+
+![Spotifeur home screen, player, synced lyrics and queue in illustrated phone frames](docs/assets/img/preview-listening.png)
+
+![Spotifeur album page, playlist, settings and appearance options in illustrated phone frames](docs/assets/img/preview-library.png)
+
+These are screenshots from the app, also used on the website. The phone frames
+are illustrations. Editable artwork is in [`design/`](design/).
+
 ## Features
 
 - **Spotify, YouTube Music and local files.** Search, play and combine tracks in
@@ -70,15 +79,6 @@ in English and French.
 | Themes, player styles, navigation bar, equalizer, gestures | Few options | Many options |
 
 Spotifeur uses the same services as the official Android app, so what you save, follow or edit in one shows up in the other.
-
-## What it looks like
-
-![Spotifeur home screen, player, synced lyrics and queue in illustrated phone frames](docs/assets/img/preview-listening.png)
-
-![Spotifeur album page, playlist, settings and appearance options in illustrated phone frames](docs/assets/img/preview-library.png)
-
-These are screenshots from the app, also used on the website. The phone frames
-are illustrations. Editable artwork is in [`design/`](design/).
 
 ## Install in three steps
 
