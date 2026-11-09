@@ -36,7 +36,9 @@ The current Android path uses HLS. `p.g931` configures both templates and the li
 GET spclient/sneaktables/v2/hls/{mode}/{audio_id_hex}/master.m3u8
 ```
 
-The master playlist lists variants. The media playlist covers the whole track with an `EXT-X-MAP` init segment and byte-range segments on CDN URLs. The CDN URLs contain the 40-character `file_id` and a temporary signature. Strip the signature when you use the URL as a cache key.
+The master playlist lists variants. For music it holds two AAC-LC variants (`CODECS="mp4a.40.2"`), `BANDWIDTH=128000` and `BANDWIDTH=256000`, each tagged `X-SPOTIFY-KEYID` with the 40-character `file_id` of that variant. The engine also has a per-file template, `sneaktables/v2/hls/4/{file_id}/audio.m3u8`.
+
+**Live:** on four tracks, modes 1, 2 and 4 all listed the same two AAC variants; modes 0, 5–8 and 10 returned 400 and mode 3 returned 404. The per-file template returned a media playlist (`METHOD=SAMPLE-AES`, `mp4a` in an `enca`/`cbcs` init segment) for the two AAC file IDs only. The Vorbis 96/160/320, AAC 24 and FLAC file IDs listed by AUDIO_FILES returned 404 there. Lossless and the other formats are therefore not reachable on the HLS path. A client following HLS can offer 128 and 256 kbit/s; Spotifeur maps its quality presets to these two variants. The media playlist covers the whole track with an `EXT-X-MAP` init segment and byte-range segments on CDN URLs. The CDN URLs contain the 40-character `file_id` and a temporary signature. Strip the signature when you use the URL as a cache key.
 
 | Mode | Media playlist | Protection |
 | --- | --- | --- |

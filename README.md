@@ -69,12 +69,15 @@ Spotifeur uses the same services as the official Android app, so what you save, 
 
 - **Home and library.** Pinned items, recently played tracks, downloads, liked songs, playlists, albums, artists and local files. Each home shelf can be shown or hidden, moved, and laid out as a row, a large row, a grid, a list or pills, with the number of items you choose. The buttons of album and playlist pages can be arranged as well, the others staying in a ⋮ menu. Pins are stored on the device only.
 - **Player.** Full-screen player with seek bar, queue, shuffle, repeat, sleep timer, and the codec and bitrate of the current track if you want them.
+- **Audio quality.** Separate settings for Wi-Fi, mobile data and downloads: Normal (AAC 128 kbit/s), Very high (AAC 256 kbit/s) or Automatic. These are the two qualities Spotify serves on the HLS path.
+- **Listening history.** Tracks played in Spotifeur from Spotify, YouTube Music and local files, together with what Spotify reports from your other apps and devices, grouped by day.
 - **Lyrics.** Synced lyrics from Spotify, with an immersive mode. When Spotify has none, Spotifeur can look them up on LRCLIB.
 - **Queue.** Reorder by dragging, swipe to remove, optional history of played tracks.
-- **Playlists.** Create a playlist on your Spotify account, rename it, set a cover from your photos, publish it on your profile, and add Spotify's recommendations. Multi-service playlists are stored on the device, take a cover from your photos and can mix Spotify, YouTube Music and local tracks, with a badge showing each track's source. Local files can be added to Spotify playlists as Spotify's own local file references, and Spotify playlists that refer to local files play them from the phone's storage. Long-press a playlist to delete it.
+- **Playlists.** Create a playlist on your Spotify account, rename it, set a cover from your photos, publish it on your profile, add Spotify's recommendations and remove tracks. Multi-service playlists are stored on the device, take a cover from your photos and can mix Spotify, YouTube Music and local tracks, with a badge showing each track's source. Local files can be added to Spotify playlists as Spotify's own local file references, and Spotify playlists that refer to local files play them from the phone's storage. Long-press a playlist to delete it.
 - **Import and export.** Export a playlist as CSV, and import a CSV exported by Spotifeur or a YouTube, YouTube Music or Spotify playlist link.
 - **YouTube Music.** Search and play the YouTube Music catalog without a Google account, with the same downloads, cache, queue and playlists as Spotify tracks. Without a Spotify account, Spotify tracks play from their closest YouTube Music match (title, artist, album and duration).
 - **Albums and artists.** Album pages, artist pages with top tracks, albums and related artists, and radios based on a track, an album, an artist or a playlist.
+- **Swipe on tracks.** Swiping a track right adds it to the queue. Each direction can be set to add to the queue, play next, save to Liked songs, remove from the playlist, or nothing.
 - **Search.** Tracks, albums, artists and playlists on Spotify, tracks on YouTube Music, with paging.
 - **Offline.** Download albums, playlists or tracks. Recently played and upcoming tracks are kept in a cache, encrypted for Spotify (512 MB to 32 GB, up to 20 tracks ahead). An offline mode cuts all network access from the app.
 - **Background playback.** Media notification, lock screen and Bluetooth controls, resume when headphones reconnect.
@@ -137,8 +140,6 @@ Without the APKM, `-PnativeRuntime=false` builds the app and runs the tests, but
 ```
 
 A build you make yourself is signed with your own key: uninstall a release build first (this erases the session and downloads).
-
-To publish a release, `scripts/release.sh --apkm /path/to/spotify.apkm` builds, signs, checks and uploads the APK. Run it with `--help` for the options.
 
 ## Documentation
 

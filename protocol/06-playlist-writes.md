@@ -36,6 +36,8 @@ The response has 1 = status (1 = code, 2 = message) and 2 = result (2 = URI of a
 
 **Add tracks.** `PlaylistService/Modify` with `{1: playlist_uri, 2: {1: "add", 7: uris…}}`. Send at most 100 URIs per request. Order and duplicates are kept.
 
+**Remove tracks.** `PlaylistService/Modify` with `{1: playlist_uri, 2: {1: "remove", 8: row_ids…}}`. Field 8 is `rows` in `modification_request.proto` (`spotify.playlist.cosmos.proto.ModificationRequest`: 1 `operation`, 2 `before`, 3 `after`, 4 `name`, 5 `playlist`, 6 `attributes`, 7 `uris`, 8 `rows`, 9 `contents`, 10 `item_id`). Rows, not URIs, are removed, so one copy of a duplicated track can go alone. Get the row IDs from `PlaylistDataService/Get` with item decoration `{4: {1: uri, 9: row_id}}` (`PlaylistItemDecorationPolicy`) and query `{4: range, 8: show_unavailable}`; each `Item` of the response (`2 → 1`) has 7 `row_id` and 18 `uri`. Wait for Playlist4 over HTTP to show the new length before releasing the engine.
+
 **Rename.** `PlaylistService/Modify` with `{1: "set", 6: {3: name}}`.
 
 **Publish on profile.** Publishing is an attribute of the playlist's row in the user's rootlist (`Playlist4.ItemAttributes` field 10, `public`), not a playlist permission. It is unrelated to collaborative mode. First make the core load the rootlist with `PlaylistDataService/Get` on `spotify:user:{username}:rootlist`, then send `RootlistModificationService/Modify` with `{1: "set", 8: row_uri, 6: {1: published}}`. Read the rootlist over HTTP to confirm.
@@ -85,4 +87,4 @@ When the service returns nothing (common for new or small playlists), a reasonab
 
 ## Verification
 
-**Live:** one test run on a real account, about 9 s: create a temporary playlist with one saved track, rename it and add a second track, publish and unpublish it (checked by reading the rootlist back), upload and register a cover, read back the name, track order and image from Playlist4, receive 13 native recommendations, then remove the playlist and confirm it left the rootlist.
+**Live:** one test run on a real account, about 9 s: create a temporary playlist with one saved track, rename it and add a second track, publish and unpublish it (checked by reading the rootlist back), upload and register a cover, read back the name, track order and image from Playlist4, receive 13 native recommendations, then remove the playlist and confirm it left the rootlist. A later run added a duplicate of the first track, removed the second copy by its row ID, and read back the original order from Playlist4.

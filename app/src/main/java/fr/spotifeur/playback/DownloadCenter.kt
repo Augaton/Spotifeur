@@ -79,7 +79,7 @@ object DownloadCenter {
                 .getOrDefault(emptyList()).associateByTo(linkedMapOf()) { it.item.id }
             loaded = true
         }
-        val upstream = SpotifyHlsDataSource.Factory(application, nativeAudio = BuildConfig.NATIVE_RUNTIME).also { helperUpstream = it }
+        val upstream = SpotifyHlsDataSource.Factory(application, nativeAudio = BuildConfig.NATIVE_RUNTIME, forDownloads = true).also { helperUpstream = it }
         val recent = CacheDataSource.Factory().setCache(AudioCache.cache(application)).setCacheKeyFactory(AudioCache.keys)
             .setCacheWriteDataSinkFactory(null).setUpstreamDataSourceFactory(upstream)
             .setFlags(CacheDataSource.FLAG_IGNORE_CACHE_FOR_UNSET_LENGTH_REQUESTS)

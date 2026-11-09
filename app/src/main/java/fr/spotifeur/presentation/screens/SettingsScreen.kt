@@ -1,5 +1,11 @@
 package fr.spotifeur.presentation.screens
 
+import androidx.compose.material.icons.automirrored.rounded.ArrowBack
+import androidx.compose.material.icons.rounded.SignalCellularAlt
+import androidx.compose.material.icons.rounded.Wifi
+import androidx.compose.material.icons.automirrored.rounded.ArrowForward
+import fr.spotifeur.presentation.components.TrackSwipeAction
+
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -305,6 +311,30 @@ private fun PlaybackSettings(model: SpotifeurModel, navController: NavHostContro
     val s by model.ui.settings.collectAsStateWithLifecycle()
     val update = model.ui::updateSettings
     SettingsScaffold(stringResource(R.string.settings_category_playback_title), navController) {
+        val streaming = mapOf(
+            fr.spotifeur.data.AudioQuality.AUTO.key to stringResource(R.string.audio_quality_auto),
+            fr.spotifeur.data.AudioQuality.NORMAL.key to stringResource(R.string.audio_quality_normal),
+            fr.spotifeur.data.AudioQuality.VERY_HIGH.key to stringResource(R.string.audio_quality_very_high),
+        )
+        ThemeSelectorItem(
+            label = stringResource(R.string.settings_quality_wifi_title), description = stringResource(R.string.settings_quality_description),
+            options = streaming, selectedKey = fr.spotifeur.data.AudioQuality.of(s.streamingQualityWifi).key,
+            onSelectionChanged = { key -> update { it.copy(streamingQualityWifi = key) } },
+            leadingIcon = { Icon(Icons.Rounded.Wifi, null, tint = MaterialTheme.colorScheme.secondary) },
+        )
+        ThemeSelectorItem(
+            label = stringResource(R.string.settings_quality_mobile_title), description = stringResource(R.string.settings_quality_description),
+            options = streaming, selectedKey = fr.spotifeur.data.AudioQuality.of(s.streamingQualityMobile).key,
+            onSelectionChanged = { key -> update { it.copy(streamingQualityMobile = key) } },
+            leadingIcon = { Icon(Icons.Rounded.SignalCellularAlt, null, tint = MaterialTheme.colorScheme.secondary) },
+        )
+        ThemeSelectorItem(
+            label = stringResource(R.string.settings_quality_download_title), description = stringResource(R.string.settings_quality_download_description),
+            options = streaming - fr.spotifeur.data.AudioQuality.AUTO.key,
+            selectedKey = fr.spotifeur.data.AudioQuality.of(s.downloadQuality).takeIf { it != fr.spotifeur.data.AudioQuality.AUTO }?.key ?: fr.spotifeur.data.AudioQuality.VERY_HIGH.key,
+            onSelectionChanged = { key -> update { it.copy(downloadQuality = key) } },
+            leadingIcon = { Icon(Icons.Rounded.Download, null, tint = MaterialTheme.colorScheme.secondary) },
+        )
         SwitchSettingItem(stringResource(R.string.settings_keep_playing_title), stringResource(R.string.settings_keep_playing_subtitle), s.keepPlayingInBackground, { v -> update { it.copy(keepPlayingInBackground = v) } }, leadingIcon = { Icon(Icons.Rounded.MusicNote, null, tint = MaterialTheme.colorScheme.secondary) })
         SwitchSettingItem(stringResource(R.string.settings_pause_on_volume_zero), stringResource(R.string.settings_pause_on_volume_zero_desc), s.pauseOnVolumeZero, { v -> update { it.copy(pauseOnVolumeZero = v) } }, leadingIcon = { Icon(painterResource(R.drawable.rounded_volume_down_24), null, tint = MaterialTheme.colorScheme.secondary) })
         SwitchSettingItem(stringResource(R.string.settings_headphones_resume_title), stringResource(R.string.settings_headphones_resume_subtitle), s.resumeOnHeadphones, { v -> update { it.copy(resumeOnHeadphones = v) } }, leadingIcon = { Icon(painterResource(R.drawable.rounded_headphones_24), null, tint = MaterialTheme.colorScheme.secondary) })
@@ -320,6 +350,27 @@ private fun BehaviorSettings(model: SpotifeurModel, navController: NavHostContro
     SettingsScaffold(stringResource(R.string.settings_category_behavior_title), navController) {
         SwitchSettingItem(stringResource(R.string.settings_tap_bg_closes_title), stringResource(R.string.settings_tap_bg_closes_subtitle), s.tapBackgroundClosesPlayer, { v -> update { it.copy(tapBackgroundClosesPlayer = v) } }, leadingIcon = { Icon(painterResource(R.drawable.rounded_touch_app_24), null, tint = MaterialTheme.colorScheme.secondary) })
         SwitchSettingItem(stringResource(R.string.settings_haptic_feedback_title), stringResource(R.string.settings_haptic_feedback_subtitle), s.hapticsEnabled, { v -> update { it.copy(hapticsEnabled = v) } }, leadingIcon = { Icon(painterResource(R.drawable.rounded_touch_app_24), null, tint = MaterialTheme.colorScheme.secondary) })
+        run {
+            val swipeOptions = mapOf(
+                TrackSwipeAction.NONE.key to stringResource(R.string.swipe_action_none),
+                TrackSwipeAction.ADD_TO_QUEUE.key to stringResource(R.string.swipe_action_queue),
+                TrackSwipeAction.PLAY_NEXT.key to stringResource(R.string.swipe_action_next),
+                TrackSwipeAction.LIKE.key to stringResource(R.string.swipe_action_like),
+                TrackSwipeAction.REMOVE.key to stringResource(R.string.swipe_action_remove),
+            )
+            ThemeSelectorItem(
+                label = stringResource(R.string.settings_swipe_right_title), description = stringResource(R.string.settings_swipe_right_subtitle),
+                options = swipeOptions, selectedKey = TrackSwipeAction.of(s.swipeRight).key,
+                onSelectionChanged = { key -> update { it.copy(swipeRight = key) } },
+                leadingIcon = { Icon(Icons.AutoMirrored.Rounded.ArrowForward, null, tint = MaterialTheme.colorScheme.secondary) },
+            )
+            ThemeSelectorItem(
+                label = stringResource(R.string.settings_swipe_left_title), description = stringResource(R.string.settings_swipe_left_subtitle),
+                options = swipeOptions, selectedKey = TrackSwipeAction.of(s.swipeLeft).key,
+                onSelectionChanged = { key -> update { it.copy(swipeLeft = key) } },
+                leadingIcon = { Icon(Icons.AutoMirrored.Rounded.ArrowBack, null, tint = MaterialTheme.colorScheme.secondary) },
+            )
+        }
     }
 }
 

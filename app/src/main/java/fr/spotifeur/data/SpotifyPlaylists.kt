@@ -141,6 +141,43 @@ internal class SpotifyPlaylists(private val context: Context) : AutoCloseable {
             }
         }
     }
+    /**
+     * Removes one appearance of a track: the [occurrence]-th (from 0) row holding [trackUri].
+     * The core removes rows, not URIs, so a duplicated track loses only the chosen copy.
+     */
+    suspend fun remove(uri: String, trackUri: String, occurrence: Int, onAccepted: suspend () -> Unit = {}) {
+        val target = playlistEntryUri(trackUri) ?: throw SpotifyFailure("A Spotify playlist only holds Spotify tracks and local files.")
+        val row = rows(uri).filter { (entry, _) -> entry == target }.getOrNull(occurrence)?.second
+            ?: throw SpotifyFailure("This track is no longer in the playlist.")
+        val session = SpotifyAccount.require(context)
+        suspend fun total(): Int {
+            val url = spotifyUrl("playlist/v2/playlist/${playlistUri(uri).substringAfterLast(':')}").newBuilder()
+                .addQueryParameter("from", "0").addQueryParameter("length", "0").build()
+            return decodePlaylistPage(authenticatedSpotifyRequest(SpotifyAccount.transport, session, url, "Remove from playlist"),
+                Music(playlistUri(uri), "", "", MusicKind.Playlist)).total
+        }
+        val before = total()
+        modify("PlaylistService", playlistModification(uri, proto { writeString(1, "remove"); writeString(8, row) }))
+        onAccepted()
+        // As for additions, keep the native owner alive until Playlist4 shows the change.
+        withTimeout(30_000) { while (total() >= before) delay(500) }
+    }
+    /** Every row of the playlist as the core sees it: entry URI and row ID, in playlist order. */
+    private suspend fun rows(uri: String): List<Pair<String, String>> {
+        val result = ArrayList<Pair<String, String>>()
+        while (true) {
+            val response = request("spotify.playlist_esperanto.proto.PlaylistDataService", "Get", playlistRowsRequest(uri, result.size, ROW_PAGE))
+            val status = response.message(1)?.number(1)
+            if (status !in 200..299) throw SpotifyFailure("The playlist could not be read.", status)
+            val items = response.message(2)?.messages(1).orEmpty()
+            items.forEach { item ->
+                val row = item.text(7) ?: return@forEach
+                val entry = (item.text(18) ?: item.message(4)?.text(1))?.let(::playlistEntryUri) ?: return@forEach
+                result += entry to row
+            }
+            if (items.size < ROW_PAGE) return result
+        }
+    }
     /** Removes only a playlist explicitly created by a test or requested by its owner. */
     suspend fun unfollow(uri: String) {
         val row = rootEntry(uri)?.first ?: playlistUri(uri)
@@ -240,6 +277,21 @@ internal fun createPlaylistRequest(name: String, uris: List<String>): ByteArray 
         uris.forEach { writeString(7, it) }
         writeByteArray(14, proto { writeEnum(1, 1) })
     })
+}
+private const val ROW_PAGE = 500
+
+/** A playlist entry as stored by Spotify: a track URI, or a `spotify:local:` reference kept as written. */
+internal fun playlistEntryUri(uri: String): String? =
+    if (uri.startsWith(SPOTIFY_LOCAL_PREFIX)) uri else canonicalMusicUri(uri)?.takeIf { it.startsWith("spotify:track:") }
+
+/** `PlaylistDataService/Get` for a range of rows, with each item's URI and row ID, unavailable items included. */
+internal fun playlistRowsRequest(uri: String, start: Int, length: Int): ByteArray = proto {
+    writeString(1, playlistUri(uri))
+    writeByteArray(2, proto {
+        writeByteArray(4, proto { writeInt32(1, start); writeInt32(2, length) })
+        writeBool(8, true)
+    })
+    writeByteArray(3, proto { writeByteArray(4, proto { writeBool(1, true); writeBool(9, true) }) })
 }
 internal fun playlistModification(uri: String, modification: ByteArray): ByteArray = proto {
     writeString(1, playlistUri(uri)); writeByteArray(2, modification)

@@ -38,4 +38,32 @@ class SpotifyPlaylistProtocolTest {
         val playlist = Music("spotify:playlist:0123456789abcdef012345", "P", "0 tracks", MusicKind.Playlist, ownerUsername = "owner")
         assertEquals(listOf(playlist), decodePins(encodePins(listOf(playlist))))
     }
+    @Test fun rowsRequestAsksForUrisAndRowIdsOfEveryRow() {
+        val request = Proto(playlistRowsRequest("spotify:playlist:0123456789abcdef012345", 500, 500))
+        assertEquals("spotify:playlist:0123456789abcdef012345", request.text(1))
+        val query = checkNotNull(request.message(2))
+        assertEquals(500, query.message(4)?.number(1))
+        assertEquals(500, query.message(4)?.number(2))
+        assertEquals(1, query.number(8))
+        val item = checkNotNull(request.message(3)?.message(4))
+        assertEquals(1, item.number(1))
+        assertEquals(1, item.number(9))
+    }
+    @Test fun removalTargetsRowsAndKeepsLocalReferencesAsWritten() {
+        val row = "0123456789abcdef0123456789abcdef"
+        val request = Proto(playlistModification("spotify:playlist:0123456789abcdef012345", proto { writeString(1, "remove"); writeString(8, row) }))
+        assertEquals("remove", request.message(2)?.text(1))
+        assertEquals(listOf(row), request.message(2)?.texts(8))
+        assertEquals("spotify:local:A:B:C+d:12", playlistEntryUri("spotify:local:A:B:C+d:12"))
+        assertEquals("spotify:track:0123456789abcdef012345", playlistEntryUri("spotify:track:0123456789abcdef012345"))
+        assertNull(playlistEntryUri("spotify:episode:0123456789abcdef012345"))
+    }
+    @Test fun swipeSettingsDefaultToQueueOnTheRightAndRoundTrip() {
+        val defaults = AppSettings.fromJson(JSONObject("{}"))
+        assertEquals("queue", defaults.swipeRight)
+        assertEquals("none", defaults.swipeLeft)
+        val chosen = defaults.copy(swipeRight = "next", swipeLeft = "remove")
+        assertEquals(chosen, AppSettings.fromJson(chosen.toJson()))
+        assertEquals(fr.spotifeur.presentation.components.TrackSwipeAction.NONE, fr.spotifeur.presentation.components.TrackSwipeAction.of("unknown"))
+    }
 }

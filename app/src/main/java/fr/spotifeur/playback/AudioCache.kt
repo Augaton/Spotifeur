@@ -67,6 +67,10 @@ object AudioCache {
 
     internal fun cachedBytesOfFile(context: Context, hex: String): Long = cachedBytes(context, hex, 0)
 
+    /** Bytes of a file among downloads only. */
+    internal fun downloadedBytesOfFile(context: Context, hex: String): Long =
+        DownloadCenter.cache(context).getCachedBytes(key(hex), 0, Long.MAX_VALUE).coerceAtLeast(0)
+
     /** True when the whole file can be read back without the service. */
     fun isAvailableOffline(context: Context, trackId: String): Boolean {
         val file = AudioIndex.get(context).record(trackId)?.file ?: return false

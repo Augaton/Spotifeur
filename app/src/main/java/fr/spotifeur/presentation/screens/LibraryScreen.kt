@@ -1,5 +1,7 @@
 package fr.spotifeur.presentation.screens
 
+import androidx.compose.material.icons.rounded.History
+
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
@@ -200,6 +202,16 @@ fun LibraryScreen(model: SpotifeurModel, navController: NavHostController, paddi
                         )
                     },
                     actions = {
+                        FilledIconButton(
+                            modifier = Modifier.padding(end = 4.dp),
+                            colors = IconButtonDefaults.filledIconButtonColors(
+                                containerColor = MaterialTheme.colorScheme.primaryContainer,
+                                contentColor = MaterialTheme.colorScheme.onPrimaryContainer
+                            ),
+                            onClick = { navController.navigateSafely(Screen.History.route) }
+                        ) {
+                            Icon(androidx.compose.material.icons.Icons.Rounded.History, stringResource(R.string.history_title))
+                        }
                         FilledIconButton(
                             modifier = Modifier.padding(end = 14.dp),
                             colors = IconButtonDefaults.filledIconButtonColors(

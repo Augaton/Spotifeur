@@ -50,6 +50,13 @@ data class AppSettings(
     /** Album and playlist page buttons: order and which ones are in the bar, as [DetailActions] encodes them. */
     val albumActions: String = "",
     val playlistActions: String = "",
+    /** What swiping a track row does, as [fr.spotifeur.presentation.components.TrackSwipeAction] keys. */
+    val swipeRight: String = "queue",
+    val swipeLeft: String = "none",
+    /** [fr.spotifeur.data.AudioQuality] keys for streaming on Wi-Fi, on mobile data, and for downloads. */
+    val streamingQualityWifi: String = "auto",
+    val streamingQualityMobile: String = "auto",
+    val downloadQuality: String = "very_high",
 ) {
     fun actions(page: DetailPage): List<ActionSlot> =
         DetailActions.decode(page, if (page == DetailPage.ALBUM) albumActions else playlistActions)
@@ -70,6 +77,9 @@ data class AppSettings(
         .put("tapBackgroundClosesPlayer", tapBackgroundClosesPlayer).put("hapticsEnabled", hapticsEnabled)
         .put("showSourceBadges", showSourceBadges).put("compactLists", compactLists).put("homeShelves", homeShelves)
         .put("albumActions", albumActions).put("playlistActions", playlistActions)
+        .put("swipeRight", swipeRight).put("swipeLeft", swipeLeft)
+        .put("streamingQualityWifi", streamingQualityWifi).put("streamingQualityMobile", streamingQualityMobile)
+        .put("downloadQuality", downloadQuality)
 
     companion object {
         const val THEME_SYSTEM = "system"
@@ -120,6 +130,11 @@ data class AppSettings(
                 homeShelves = json.optString("homeShelves", d.homeShelves),
                 albumActions = json.optString("albumActions", d.albumActions),
                 playlistActions = json.optString("playlistActions", d.playlistActions),
+                swipeRight = json.optString("swipeRight", d.swipeRight),
+                swipeLeft = json.optString("swipeLeft", d.swipeLeft),
+                streamingQualityWifi = json.optString("streamingQualityWifi", d.streamingQualityWifi),
+                streamingQualityMobile = json.optString("streamingQualityMobile", d.streamingQualityMobile),
+                downloadQuality = json.optString("downloadQuality", d.downloadQuality),
             )
         }
     }

@@ -103,6 +103,9 @@ fun EnhancedSongListItem(
     showMoreOptionsButton: Boolean = true,
     /** Shows where the track comes from, when the source badges setting is on. */
     showSourceBadge: Boolean = false,
+    /** Allows the swipe action "Remove from playlist" on this row. */
+    onSwipeRemove: (() -> Unit)? = null,
+    swipeEnabled: Boolean = true,
     onLongPress: () -> Unit = {},
     onMoreOptionsClick: (Song) -> Unit,
     onClick: () -> Unit
@@ -247,8 +250,10 @@ fun EnhancedSongListItem(
         }
     } else {
         // Actual Song Item Layout
+        fr.spotifeur.presentation.components.TrackSwipeBox(song, surfaceShape, modifier.fillMaxWidth(),
+            enabled = swipeEnabled && !isSelectionMode, onRemove = onSwipeRemove) {
         Surface(
-            modifier = modifier
+            modifier = Modifier
                 .fillMaxWidth()
                 .scale(selectionScale)
                 .clip(surfaceShape)
@@ -409,6 +414,7 @@ fun EnhancedSongListItem(
                     }
                 }
             }
+        }
         }
     }
 }

@@ -34,6 +34,10 @@ class SpotifyPlaylistWriteTest {
             service.rename(playlist.id, "Spotifeur — renamed test")
             service.add(playlist.id, tracks.drop(1))
             Log.i("SpotifeurPlaylistTest", "renamed and added")
+            // A duplicate, then removal of that second copy only: the first copy keeps its place.
+            service.add(playlist.id, tracks.take(1))
+            service.remove(playlist.id, tracks[0].id, occurrence = 1)
+            Log.i("SpotifeurPlaylistTest", "duplicate added and removed by row")
             assertTrue(service.isOwned(playlist.id))
             service.setPublished(playlist.id, true)
             assertTrue(service.published(playlist.id))

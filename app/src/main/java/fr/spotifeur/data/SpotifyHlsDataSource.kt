@@ -86,7 +86,7 @@ internal class SpotifyHlsDataSource private constructor(
         if (memory != null) { memory = null; memoryUri = null } else upstream.close()
     }
 
-    class Factory(context: Context, private val nativeAudio: Boolean = false) : HttpDataSource.Factory, AutoCloseable {
+    class Factory(context: Context, private val nativeAudio: Boolean = false, private val forDownloads: Boolean = false) : HttpDataSource.Factory, AutoCloseable {
         internal val app = context.applicationContext
         private val manifests = ConcurrentHashMap<String, String>()
         private val closed = AtomicBoolean()
@@ -142,11 +142,19 @@ internal class SpotifyHlsDataSource private constructor(
             val text = playlist(masterUrl)
             val base = masterUrl.toHttpUrl()
             variantUris(text).forEach { variant -> base.resolve(variant)?.let { index.rememberPlaylistOwner(it.toString(), track) } }
-            return selectVariant(text) { variant, _ ->
-                base.resolve(variant)?.let { index.fileOfPlaylist(it.toString()) }
-                    ?.let { AudioCache.cachedBytesOfFile(app, it.hex) } ?: 0
+            val settings = fr.spotifeur.data.preferences.SettingsStore.get(app).settings.value
+            val target = if (forDownloads) AudioQuality.of(settings.downloadQuality).bandwidth(metered = false)
+                else AudioQuality.of(if (metered()) settings.streamingQualityMobile else settings.streamingQualityWifi).bandwidth(metered())
+            return selectVariant(text, target) { variant, _ ->
+                base.resolve(variant)?.let { index.fileOfPlaylist(it.toString()) }?.let {
+                    // A download keeps to its own copies; playback uses whatever is already on the device.
+                    if (forDownloads) AudioCache.downloadedBytesOfFile(app, it.hex) else AudioCache.cachedBytesOfFile(app, it.hex)
+                } ?: 0
             }
         }
+
+        private fun metered(): Boolean =
+            app.getSystemService(android.net.ConnectivityManager::class.java)?.isActiveNetworkMetered ?: true
 
         /** Stored text first; the service is only asked once per playlist, or to renew a signature. */
         internal fun playlist(url: String, fresh: Boolean = false): String {

@@ -154,6 +154,7 @@ fun HomeScreen(model: SpotifeurModel, navController: NavHostController, paddingV
             topBar = {
                 HomeGradientTopBar(
                     onSettingsClick = { navController.navigateSafely(Screen.Settings.route) },
+                    onHistoryClick = { navController.navigateSafely(Screen.History.route) },
                     isScrolled = isScrolled,
                 )
             }

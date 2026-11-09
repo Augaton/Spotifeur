@@ -147,6 +147,25 @@ fun PlaylistDetailScreen(model: SpotifeurModel, navController: NavHostController
         val seen = HashMap<String, Int>()
         songs.map { song -> val occurrence = seen.merge(song.id, 1, Int::plus) ?: 1; "${song.id}#$occurrence" }
     }
+    var removing by remember(playlistId) { mutableStateOf(false) }
+    // Removes the row shown at a position of the displayed (possibly sorted) list.
+    val removeAt: ((Int) -> Unit)? = when {
+        isLocalList -> { index -> ordered.getOrNull(index)?.let { model.localPlaylistStore.removeAt(playlistId, it.first) } }
+        isOwned && !isLiked && online -> { index ->
+            ordered.getOrNull(index)?.let { (position, _) ->
+                if (!removing) {
+                    removing = true
+                    scope.launch {
+                        try { model.removeSpotifyPlaylistTrack(current, position) }
+                        catch (cancelled: CancellationException) { throw cancelled }
+                        catch (failure: Exception) { model.showMessage(failure.message.orEmpty()) }
+                        finally { removing = false }
+                    }
+                }
+            }
+        }
+        else -> null
+    }
     val reorderState = rememberReorderableLazyListState(listState) { from, to ->
         if (from.index > 0 && to.index > 0) model.localPlaylistStore.move(playlistId, from.index - 1, to.index - 1)
     }
@@ -219,6 +238,8 @@ fun PlaylistDetailScreen(model: SpotifeurModel, navController: NavHostController
                                 onLongPress = { selected = song; selectedIndex = index },
                                 onClick = { ui.playSongs(songs, song, current.title) },
                                 showSourceBadge = isLocalList,
+                                onSwipeRemove = removeAt?.let { remove -> { remove(index) } },
+                                swipeEnabled = !reordering,
                             )
                         }
                         // Drag handles only appear in reorder mode, chosen from the page's buttons.
@@ -282,7 +303,7 @@ fun PlaylistDetailScreen(model: SpotifeurModel, navController: NavHostController
     }
     SongOptionsHost(
         ui, navController, selected, songs, current.title,
-        onRemoveFromPlaylist = if (isLocalList) ({ ordered.getOrNull(selectedIndex)?.let { model.localPlaylistStore.removeAt(playlistId, it.first) } }) else null,
+        onRemoveFromPlaylist = removeAt?.let { remove -> { remove(selectedIndex) } },
     ) { selected = null }
     if (renaming && isOwned) SpotifyPlaylistEditor(model, playlist = current, onDismiss = { renaming = false })
     if (addingTracks) fr.spotifeur.presentation.components.AddTracksSheet(model, current, spotifyPlaylist = !isLocalList,

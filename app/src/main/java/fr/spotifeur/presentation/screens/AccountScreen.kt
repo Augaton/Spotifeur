@@ -4,6 +4,17 @@ package fr.spotifeur.presentation.screens
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.FilledTonalButton
+import androidx.compose.material3.Icon
+import androidx.compose.ui.res.painterResource
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -16,7 +27,6 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -47,32 +57,46 @@ import fr.spotifeur.ui.theme.GoogleSansRounded
 @Composable
 fun AccountScreen(model: SpotifeurModel, account: AccountUi) {
     val ctx = LocalContext.current
-    Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
-        Box(Modifier.fillMaxSize().safeDrawingPadding().imePadding(), contentAlignment = Alignment.TopCenter) {
+    val colors = MaterialTheme.colorScheme
+    Surface(Modifier.fillMaxSize(), color = colors.background) {
+        BoxWithConstraints(Modifier.fillMaxSize().safeDrawingPadding().imePadding(), contentAlignment = Alignment.TopCenter) {
+            // The name alone at the top, the choices at the bottom within reach of the thumb.
             Column(
-                Modifier.widthIn(max = 560.dp).fillMaxWidth().verticalScroll(rememberScrollState()).padding(24.dp),
-                verticalArrangement = Arrangement.spacedBy(4.dp),
+                Modifier.widthIn(max = 560.dp).fillMaxWidth().verticalScroll(rememberScrollState())
+                    .heightIn(min = maxHeight).padding(horizontal = 20.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp),
             ) {
                 Text(
                     "Spotifeur",
-                    modifier = Modifier.padding(top = 32.dp),
+                    modifier = Modifier.padding(start = 4.dp, top = 72.dp, bottom = 40.dp),
                     fontFamily = GoogleSansRounded,
                     fontWeight = FontWeight.ExtraBold,
-                    fontSize = 48.sp,
-                    color = MaterialTheme.colorScheme.primary,
+                    fontSize = 64.sp,
+                    lineHeight = 68.sp,
+                    letterSpacing = (-1.5).sp,
+                    color = colors.primary,
                 )
-                Text(
-                    ctx.getString(R.string.welcome),
-                    modifier = Modifier.padding(top = 8.dp, bottom = 24.dp),
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-                SignInForm(account, model)
-                if (account.codeLength == null) OutlinedButton(
+                Spacer(Modifier.weight(1f))
+                Surface(shape = RoundedCornerShape(32.dp), color = colors.surfaceContainer, modifier = Modifier.fillMaxWidth()) {
+                    Column(Modifier.padding(20.dp)) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(painterResource(R.drawable.ic_source_spotify), null, Modifier.size(24.dp), tint = colors.primary)
+                            Text("Spotify", Modifier.padding(start = 10.dp).weight(1f), style = MaterialTheme.typography.titleLarge,
+                                fontFamily = GoogleSansRounded, fontWeight = FontWeight.SemiBold)
+                            Surface(shape = CircleShape, color = colors.surfaceContainerHighest) {
+                                Text(ctx.getString(R.string.login_optional), Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                                    style = MaterialTheme.typography.labelLarge, color = colors.onSurfaceVariant)
+                            }
+                        }
+                        SignInForm(account, model)
+                    }
+                }
+                if (account.codeLength == null) FilledTonalButton(
                     onClick = model::continueWithoutAccount,
                     enabled = !account.working,
-                    modifier = Modifier.fillMaxWidth().padding(top = 24.dp),
-                ) { Text(ctx.getString(R.string.continue_without_account)) }
+                    modifier = Modifier.fillMaxWidth().height(56.dp),
+                ) { Text(ctx.getString(R.string.continue_without_account), style = MaterialTheme.typography.titleSmall) }
+                Spacer(Modifier.height(24.dp))
             }
         }
     }
@@ -96,7 +120,8 @@ private fun SignInForm(account: AccountUi, model: SpotifeurModel) {
                     Text(
                         account.codeEmail?.let { ctx.getString(R.string.code_prompt_email, it) }
                             ?: ctx.getString(R.string.code_prompt),
-                        Modifier.padding(vertical = 12.dp),
+                        Modifier.padding(top = 16.dp, bottom = 8.dp),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                     OutlinedTextField(
                         value = code,
@@ -104,6 +129,7 @@ private fun SignInForm(account: AccountUi, model: SpotifeurModel) {
                         label = { Text(ctx.getString(R.string.code_label)) },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                         singleLine = true,
+                        shape = RoundedCornerShape(16.dp),
                         modifier = Modifier.fillMaxWidth(),
                     )
                     Button(
@@ -114,17 +140,12 @@ private fun SignInForm(account: AccountUi, model: SpotifeurModel) {
                             code = ""
                         },
                         enabled = code.length == codeLength,
-                        modifier = Modifier.padding(top = 12.dp),
+                        modifier = Modifier.fillMaxWidth().padding(top = 16.dp).height(56.dp),
                     ) { Text(ctx.getString(R.string.code_confirm)) }
                     TextButton(onClick = model::disconnectSpotify) { Text(ctx.getString(R.string.action_cancel)) }
                 }
                 else -> {
-                    Text(
-                        if (passwordMode) ctx.getString(R.string.login_password_hint)
-                        else ctx.getString(R.string.login_code_hint),
-                        Modifier.padding(top = 12.dp, bottom = 8.dp),
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
+                    Spacer(Modifier.height(16.dp))
                     OutlinedTextField(
                         value = username,
                         onValueChange = { username = it },
@@ -132,6 +153,7 @@ private fun SignInForm(account: AccountUi, model: SpotifeurModel) {
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
                         enabled = !working,
                         singleLine = true,
+                        shape = RoundedCornerShape(16.dp),
                         modifier = Modifier.fillMaxWidth().semantics {
                             contentType = ContentType.Username + ContentType.EmailAddress
                         },
@@ -144,6 +166,7 @@ private fun SignInForm(account: AccountUi, model: SpotifeurModel) {
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
                         enabled = !working,
                         singleLine = true,
+                        shape = RoundedCornerShape(16.dp),
                         modifier = Modifier.fillMaxWidth().padding(top = 8.dp).semantics {
                             contentType = ContentType.Password
                         },
@@ -157,7 +180,7 @@ private fun SignInForm(account: AccountUi, model: SpotifeurModel) {
                             password = ""
                         },
                         enabled = !working && username.isNotBlank() && (!passwordMode || password.isNotEmpty()),
-                        modifier = Modifier.padding(top = 12.dp),
+                        modifier = Modifier.fillMaxWidth().padding(top = 16.dp).height(56.dp),
                     ) {
                         Text(when {
                             account.working -> ctx.getString(R.string.login_connecting)
@@ -168,6 +191,7 @@ private fun SignInForm(account: AccountUi, model: SpotifeurModel) {
                     TextButton(
                         onClick = { passwordMode = !passwordMode; password = "" },
                         enabled = !working,
+                        modifier = Modifier.align(Alignment.CenterHorizontally),
                     ) { Text(if (passwordMode) ctx.getString(R.string.login_use_code) else ctx.getString(R.string.login_use_password)) }
                     if (account.working) TextButton(onClick = model::disconnectSpotify) { Text(ctx.getString(R.string.action_cancel)) }
                     account.error?.let {

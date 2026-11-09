@@ -189,13 +189,18 @@ internal fun parseMediaPlaylist(text: String, playlistUrl: String): Pair<AudioFi
     return AudioFileRecord(hex, end, playlistUrl) to found
 }
 
-/** Keeps one variant: the service delivers each in full, so hopping between them would only cache some of each. */
-internal fun selectVariant(master: String, preference: (variantUri: String, bandwidth: Long) -> Long): String {
+/**
+ * Keeps one variant: the service delivers each in full, so hopping between them would only cache some of each.
+ * A variant with stored bytes wins (offline playback depends on it); otherwise the highest bandwidth not above
+ * [targetBandwidth], or the lowest one when every variant is above it.
+ */
+internal fun selectVariant(master: String, targetBandwidth: Long = Long.MAX_VALUE, preference: (variantUri: String, bandwidth: Long) -> Long): String {
     val lines = master.lines()
     val variants = lines.indices.filter { lines[it].startsWith("#EXT-X-STREAM-INF") && it + 1 < lines.size && !lines[it + 1].startsWith("#") }
     if (variants.size < 2) return master
     fun bandwidth(index: Int) = Regex("(?:^|[:,])BANDWIDTH=(\\d+)").find(lines[index])?.groupValues?.get(1)?.toLongOrNull() ?: 0
-    val best = variants.maxWith(compareBy({ preference(lines[it + 1].trim(), bandwidth(it)) }, { bandwidth(it) }))
+    fun fit(index: Int) = bandwidth(index).let { if (it <= targetBandwidth) it else -it }
+    val best = variants.maxWith(compareBy({ preference(lines[it + 1].trim(), bandwidth(it)) }, { fit(it) }))
     val dropped = variants.filter { it != best }.flatMap { listOf(it, it + 1) }.toSet()
     return lines.filterIndexed { index, _ -> index !in dropped }.joinToString("\n")
 }

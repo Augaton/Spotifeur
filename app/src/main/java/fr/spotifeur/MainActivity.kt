@@ -37,6 +37,19 @@ class MainActivity : ComponentActivity() {
             val settings by model.ui.settings.collectAsStateWithLifecycle()
             val downloads by model.ui.downloadCollections.collectAsStateWithLifecycle()
             val notifications = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { }
+            // Asked once, at first launch, so local files are in the library right away.
+            val media = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+                if (granted) model.refreshLocalTracks()
+            }
+            LaunchedEffect(Unit) {
+                val preferences = getSharedPreferences("first_launch", MODE_PRIVATE)
+                if (!preferences.getBoolean("media_requested", false)) {
+                    preferences.edit().putBoolean("media_requested", true).apply()
+                    if (ContextCompat.checkSelfPermission(this@MainActivity, fr.spotifeur.data.LocalLibrary.PERMISSION) != PackageManager.PERMISSION_GRANTED) {
+                        media.launch(fr.spotifeur.data.LocalLibrary.PERMISSION)
+                    }
+                }
+            }
             val downloading = downloads.values.any { it.isActive }
             LaunchedEffect(downloading) {
                 if (downloading && Build.VERSION.SDK_INT >= 33 &&
@@ -58,10 +71,24 @@ class MainActivity : ComponentActivity() {
                 val quality = remember(settings.showQualityInLists, qualityRevision) {
                     { song: Song -> if (settings.showQualityInLists) model.ui.qualityOf(song) else null }
                 }
+                val swipe = remember(settings.swipeRight, settings.swipeLeft) {
+                    fr.spotifeur.presentation.components.TrackSwipeConfig(
+                        fr.spotifeur.presentation.components.TrackSwipeAction.of(settings.swipeRight),
+                        fr.spotifeur.presentation.components.TrackSwipeAction.of(settings.swipeLeft),
+                    ) { action, song ->
+                        when (action) {
+                            fr.spotifeur.presentation.components.TrackSwipeAction.ADD_TO_QUEUE -> model.ui.addSongToQueue(song)
+                            fr.spotifeur.presentation.components.TrackSwipeAction.PLAY_NEXT -> model.ui.addSongNextToQueue(song)
+                            fr.spotifeur.presentation.components.TrackSwipeAction.LIKE -> model.ui.toggleFavoriteSpecificSong(song)
+                            else -> Unit
+                        }
+                    }
+                }
                 CompositionLocalProvider(
                     LocalShowScrollbar provides settings.showScrollbar, LocalTrackQuality provides quality,
                     fr.spotifeur.presentation.components.LocalCompactLists provides settings.compactLists,
                     fr.spotifeur.presentation.components.LocalSourceBadges provides settings.showSourceBadges,
+                    fr.spotifeur.presentation.components.LocalTrackSwipe provides swipe,
                 ) {
                     SpotifeurMain(model)
                 }

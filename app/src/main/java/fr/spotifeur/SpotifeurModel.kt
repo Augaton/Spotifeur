@@ -93,6 +93,7 @@ class SpotifeurModel(private val app: Application) : AndroidViewModel(app) {
     private val mutableLocalTracks = MutableStateFlow<List<Music>>(emptyList())
     val localTracks = mutableLocalTracks.asStateFlow()
     val localPlaylistStore = LocalPlaylistStore(app)
+    val listeningHistory = fr.spotifeur.data.ListeningHistoryStore(app)
     val localPlaylists = localPlaylistStore.playlists
     fun refreshLocalTracks() { viewModelScope.launch { mutableLocalTracks.value = localLibrary.load() } }
     val pinnedStoreForBackup get() = pinnedStore
@@ -189,8 +190,16 @@ class SpotifeurModel(private val app: Application) : AndroidViewModel(app) {
         }
         refreshLocalTracks()
         viewModelScope.launch {
+            // One history entry each time a queue position starts playing.
+            var counted: String? = null
             player.state.collect { playback ->
                 val track = playback.track
+                val position = track?.let { "${playback.index}:${it.id}" }
+                if (position == null) counted = null
+                else if (playback.playing && position != counted) {
+                    counted = position
+                    withContext(Dispatchers.IO) { listeningHistory.record(track) }
+                }
                 if (track != null && playback.playing && mutableRecent.value.firstOrNull()?.id != track.id) {
                     mutableRecent.update { (listOf(track) + it.filterNot { previous -> previous.id == track.id }).take(12) }
                 }
@@ -557,6 +566,37 @@ class SpotifeurModel(private val app: Application) : AndroidViewModel(app) {
             if (fr.spotifeur.playback.DownloadCenter.collections.value.containsKey(playlist.id)) {
                 fr.spotifeur.playback.DownloadCenter.enqueue(app, updated.item, updated.tracks)
             }
+        }
+    }
+
+    /** Spotifeur's plays merged with the tracks Spotify reports for the account's other apps and devices. */
+    internal suspend fun fullListeningHistory(): List<fr.spotifeur.data.HistoryEntry> {
+        val local = listeningHistory.entries.value
+        val source = catalog ?: return local
+        if (!online.value) return local
+        val remote = runCatching {
+            val plays = fr.spotifeur.data.spotifyRecentPlays(SpotifyAccount.require(app))
+            val tracks = source.hydrate(plays.map { it.track }).associateBy(Music::id)
+            plays.mapNotNull { play -> tracks[play.track]?.let { fr.spotifeur.data.HistoryEntry(it, play.playedAt, fromSpotify = true) } }
+        }.getOrElse { failure -> if (failure is kotlinx.coroutines.CancellationException) throw failure; emptyList() }
+        return fr.spotifeur.data.mergeHistory(local, remote)
+    }
+
+    /** Removes the track at [index] of the playlist as loaded, leaving other copies of it in place. */
+    internal suspend fun removeSpotifyPlaylistTrack(playlist: Music, index: Int) {
+        val content = mutableDetails.value[playlist.id]?.content ?: return
+        val track = content.tracks.getOrNull(index) ?: return
+        val occurrence = content.tracks.take(index).count { it.id == track.id }
+        spotifyPlaylists.remove(playlist.id, track.id, occurrence) {
+            detailJobs.remove(playlist.id)?.cancel()
+            val latest = mutableDetails.value[playlist.id]?.content ?: content
+            val position = if (latest.tracks.getOrNull(index)?.id == track.id) index
+                else latest.tracks.withIndex().filter { it.value.id == track.id }.getOrNull(occurrence)?.index ?: return@remove
+            // The next page starts at a row offset, which moves back by the removed row.
+            val updated = latest.copy(tracks = latest.tracks.toMutableList().apply { removeAt(position) }, total = (latest.total - 1).coerceAtLeast(0),
+                nextPage = latest.nextPage?.toIntOrNull()?.let { (it - 1).coerceAtLeast(0).toString() } ?: latest.nextPage)
+            mutableDetails.update { it + (playlist.id to DetailUi(updated)) }
+            withContext(Dispatchers.IO) { store.saveDetail(playlist.id, updated) }
         }
     }
 
