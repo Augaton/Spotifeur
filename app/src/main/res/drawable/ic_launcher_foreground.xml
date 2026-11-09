@@ -1,0 +1,102 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Generated from design/logo.svg. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="108dp" android:height="108dp"
+    android:viewportWidth="1881" android:viewportHeight="1881">
+    <group android:translateX="313.5" android:translateY="313.5">
+        <group android:translateY="19">
+        <group android:pivotX="622" android:pivotY="634" android:scaleX="1.11962" android:scaleY="1.11962">
+            <path android:fillColor="#00251D" android:fillAlpha="0.0002" android:pathData="@string/logo_pebble_path" />
+        </group>
+        <group android:pivotX="622" android:pivotY="634" android:scaleX="1.10766" android:scaleY="1.10766">
+            <path android:fillColor="#00251D" android:fillAlpha="0.0005" android:pathData="@string/logo_pebble_path" />
+        </group>
+        <group android:pivotX="622" android:pivotY="634" android:scaleX="1.09569" android:scaleY="1.09569">
+            <path android:fillColor="#00251D" android:fillAlpha="0.0012" android:pathData="@string/logo_pebble_path" />
+        </group>
+        <group android:pivotX="622" android:pivotY="634" android:scaleX="1.08373" android:scaleY="1.08373">
+            <path android:fillColor="#00251D" android:fillAlpha="0.0028" android:pathData="@string/logo_pebble_path" />
+        </group>
+        <group android:pivotX="622" android:pivotY="634" android:scaleX="1.07177" android:scaleY="1.07177">
+            <path android:fillColor="#00251D" android:fillAlpha="0.0057" android:pathData="@string/logo_pebble_path" />
+        </group>
+        <group android:pivotX="622" android:pivotY="634" android:scaleX="1.05981" android:scaleY="1.05981">
+            <path android:fillColor="#00251D" android:fillAlpha="0.0105" android:pathData="@string/logo_pebble_path" />
+        </group>
+        <group android:pivotX="622" android:pivotY="634" android:scaleX="1.04785" android:scaleY="1.04785">
+            <path android:fillColor="#00251D" android:fillAlpha="0.0174" android:pathData="@string/logo_pebble_path" />
+        </group>
+        <group android:pivotX="622" android:pivotY="634" android:scaleX="1.03589" android:scaleY="1.03589">
+            <path android:fillColor="#00251D" android:fillAlpha="0.0260" android:pathData="@string/logo_pebble_path" />
+        </group>
+        <group android:pivotX="622" android:pivotY="634" android:scaleX="1.02392" android:scaleY="1.02392">
+            <path android:fillColor="#00251D" android:fillAlpha="0.0351" android:pathData="@string/logo_pebble_path" />
+        </group>
+        <group android:pivotX="622" android:pivotY="634" android:scaleX="1.01196" android:scaleY="1.01196">
+            <path android:fillColor="#00251D" android:fillAlpha="0.0429" android:pathData="@string/logo_pebble_path" />
+        </group>
+        <group android:pivotX="622" android:pivotY="634" android:scaleX="1.00000" android:scaleY="1.00000">
+            <path android:fillColor="#00251D" android:fillAlpha="0.0474" android:pathData="@string/logo_pebble_path" />
+        </group>
+        <group android:pivotX="622" android:pivotY="634" android:scaleX="0.98804" android:scaleY="0.98804">
+            <path android:fillColor="#00251D" android:fillAlpha="0.0471" android:pathData="@string/logo_pebble_path" />
+        </group>
+        <group android:pivotX="622" android:pivotY="634" android:scaleX="0.97608" android:scaleY="0.97608">
+            <path android:fillColor="#00251D" android:fillAlpha="0.0419" android:pathData="@string/logo_pebble_path" />
+        </group>
+        <group android:pivotX="622" android:pivotY="634" android:scaleX="0.96411" android:scaleY="0.96411">
+            <path android:fillColor="#00251D" android:fillAlpha="0.0332" android:pathData="@string/logo_pebble_path" />
+        </group>
+        <group android:pivotX="622" android:pivotY="634" android:scaleX="0.95215" android:scaleY="0.95215">
+            <path android:fillColor="#00251D" android:fillAlpha="0.0234" android:pathData="@string/logo_pebble_path" />
+        </group>
+        <group android:pivotX="622" android:pivotY="634" android:scaleX="0.94019" android:scaleY="0.94019">
+            <path android:fillColor="#00251D" android:fillAlpha="0.0146" android:pathData="@string/logo_pebble_path" />
+        </group>
+        <group android:pivotX="622" android:pivotY="634" android:scaleX="0.92823" android:scaleY="0.92823">
+            <path android:fillColor="#00251D" android:fillAlpha="0.0081" android:pathData="@string/logo_pebble_path" />
+        </group>
+        <group android:pivotX="622" android:pivotY="634" android:scaleX="0.91627" android:scaleY="0.91627">
+            <path android:fillColor="#00251D" android:fillAlpha="0.0040" android:pathData="@string/logo_pebble_path" />
+        </group>
+        <group android:pivotX="622" android:pivotY="634" android:scaleX="0.90431" android:scaleY="0.90431">
+            <path android:fillColor="#00251D" android:fillAlpha="0.0018" android:pathData="@string/logo_pebble_path" />
+        </group>
+        <group android:pivotX="622" android:pivotY="634" android:scaleX="0.89234" android:scaleY="0.89234">
+            <path android:fillColor="#00251D" android:fillAlpha="0.0007" android:pathData="@string/logo_pebble_path" />
+        </group>
+        <group android:pivotX="622" android:pivotY="634" android:scaleX="0.88038" android:scaleY="0.88038">
+            <path android:fillColor="#00251D" android:fillAlpha="0.0002" android:pathData="@string/logo_pebble_path" />
+        </group>
+        </group>
+        <path android:pathData="@string/logo_pebble_path">
+            <aapt:attr name="android:fillColor">
+            <gradient android:type="linear" android:startX="199" android:startY="218" android:endX="1046.7" android:endY="1048.5">
+                <item android:offset="0" android:color="#FFFFFFFF" />
+                <item android:offset="0.26" android:color="#FFFAFFFC" />
+                <item android:offset="0.55" android:color="#FFF0FFF7" />
+                <item android:offset="1" android:color="#FFD5FCE9" />
+            </gradient>
+        </aapt:attr>
+        </path>
+        <path android:pathData="@string/logo_pebble_path" android:strokeWidth="5" android:strokeLineJoin="round">
+            <aapt:attr name="android:strokeColor">
+            <gradient android:type="linear" android:startX="199" android:startY="218" android:endX="1046.7" android:endY="1048.5">
+                <item android:offset="0" android:color="#ADFFFFFF" />
+                <item android:offset="0.36" android:color="#29F4FFF8" />
+                <item android:offset="1" android:color="#6B71BC96" />
+            </gradient>
+        </aapt:attr>
+        </path>
+        <path android:pathData="@string/logo_play_path">
+            <aapt:attr name="android:fillColor">
+            <gradient android:type="linear" android:startX="468" android:startY="434" android:endX="836" android:endY="835">
+                <item android:offset="0" android:color="#FF0A5B48" />
+                <item android:offset="0.58" android:color="#FF11745A" />
+                <item android:offset="1" android:color="#FF1D8265" />
+            </gradient>
+        </aapt:attr>
+        </path>
+    </group>
+</vector>

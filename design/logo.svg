@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg xmlns="http://www.w3.org/2000/svg"
+     xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+     width="1254" height="1254" viewBox="0 0 1254 1254"
+     role="img" aria-labelledby="logo-title logo-desc">
+  <title id="logo-title">Spotifeur logo</title>
+  <desc id="logo-desc">A mint pebble shape with a recessed play symbol on an emerald background. Depth made with editable gradients and vector filters.</desc>
+
+  <defs>
+    <!-- One light source, top left. -->
+    <linearGradient id="background-gradient" x1="0" y1="0" x2="1" y2="1" gradientUnits="objectBoundingBox">
+      <stop offset="0" stop-color="#238A6B" />
+      <stop offset="0.45" stop-color="#11745A" />
+      <stop offset="1" stop-color="#0A5D49" />
+    </linearGradient>
+    <linearGradient id="mint-volume" x1="0" y1="0" x2="1" y2="1" gradientUnits="objectBoundingBox">
+      <stop offset="0" stop-color="#FFFFFF" />
+      <stop offset="0.26" stop-color="#FAFFFC" />
+      <stop offset="0.55" stop-color="#F0FFF7" />
+      <stop offset="1" stop-color="#D5FCE9" />
+    </linearGradient>
+    <linearGradient id="mint-rim" x1="0" y1="0" x2="1" y2="1" gradientUnits="objectBoundingBox">
+      <stop offset="0" stop-color="#FFFFFF" stop-opacity="0.68" />
+      <stop offset="0.36" stop-color="#F4FFF8" stop-opacity="0.16" />
+      <stop offset="1" stop-color="#71BC96" stop-opacity="0.42" />
+    </linearGradient>
+    <linearGradient id="play-recess" x1="0" y1="0" x2="1" y2="1" gradientUnits="objectBoundingBox">
+      <stop offset="0" stop-color="#0A5B48" />
+      <stop offset="0.58" stop-color="#11745A" />
+      <stop offset="1" stop-color="#1D8265" />
+    </linearGradient>
+    <filter id="soft-elevation" x="-20%" y="-20%" width="140%" height="150%" color-interpolation-filters="sRGB">
+      <feGaussianBlur in="SourceAlpha" stdDeviation="15" result="shadow-blur" />
+      <feOffset in="shadow-blur" dx="0" dy="19" result="shadow-offset" />
+      <feFlood flood-color="#00251D" flood-opacity="0.31" result="shadow-color" />
+      <feComposite in="shadow-color" in2="shadow-offset" operator="in" result="shadow" />
+      <feMerge>
+        <feMergeNode in="shadow" />
+        <feMergeNode in="SourceGraphic" />
+      </feMerge>
+    </filter>
+  </defs>
+
+  <!-- The three layers below stay editable separately. -->
+  <g id="background-layer" inkscape:groupmode="layer" inkscape:label="01 · Emerald background">
+    <rect id="background" x="0" y="0" width="1254" height="1254"
+          rx="260" ry="260" fill="url(#background-gradient)" />
+  </g>
+
+  <g id="symbol-layer" inkscape:groupmode="layer" inkscape:label="02 · Mint pebble">
+    <path id="mint-pebble" fill="url(#mint-volume)" filter="url(#soft-elevation)"
+          stroke="url(#mint-rim)" stroke-width="5" stroke-linejoin="round"
+          d="M 1044 630
+             C 1046.7 701.2, 1036 785.8, 1002 848
+             C 968 910.2, 902.8 970, 840 1003
+             C 777.2 1036, 695.2 1048.5, 625 1046
+             C 554.8 1043.5, 479.8 1022.3, 419 988
+             C 358.2 953.7, 296.7 899.7, 260 840
+             C 223.3 780.3, 196.2 698.5, 199 630
+             C 201.8 561.5, 238.3 484.8, 277 429
+             C 315.7 373.2, 373 329.5, 431 295
+             C 489 260.5, 556.3 229.2, 625 222
+             C 693.7 214.8, 782.8 218.8, 843 252
+             C 903.2 285.2, 952.5 358, 986 421
+             C 1019.5 484, 1041.3 558.8, 1044 630 Z" />
+  </g>
+
+  <g id="play-layer" inkscape:groupmode="layer" inkscape:label="03 · Play triangle">
+    <!-- Recess slightly darker at the top and lighter at the bottom. -->
+    <path id="play-cutout" fill="url(#play-recess)"
+          d="M 526 441
+             C 508 431, 490 434, 479 446
+             C 472 455, 468 468, 468 480
+             L 468 789
+             C 468 806, 475 819, 489 827
+             C 503 835, 517 834, 532 826
+             L 810 670
+             C 826 661, 836 649, 836 631
+             C 836 614, 827 602, 810 593 Z" />
+  </g>
+</svg>

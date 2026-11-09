@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <!-- Small icon of the Media3 playback notification. -->
+    <drawable name="media3_notification_small_icon" tools:ignore="UnusedResources">@drawable/ic_stat_spotifeur</drawable>
+</resources>

@@ -1,5 +1,5 @@
 <div align="center">
-  <!-- Logo: to be added (docs/assets/img/icon.png). -->
+  <img src="docs/assets/img/icon.png" alt="Spotifeur logo" width="128" height="128">
   <h1>Spotifeur</h1>
   <p><strong>A music player for Android for Spotify, YouTube Music and local files.</strong></p>
   <p>

@@ -4,6 +4,14 @@
 
 Nothing yet.
 
+## v1.2.3
+
+### Changed
+
+- New logo. The launcher icon is an adaptive icon drawn as vectors from `design/logo.svg`: an emerald background layer, a foreground layer with the mint pebble, its play recess and its shadow (the SVG blur rebuilt as nested scaled copies whose alpha follows the Gaussian edge), and a monochrome layer for Android 13 themed icons. The launcher applies its own mask.
+- The download and playback notifications use the logo glyph as their small icon (`ic_stat_spotifeur`, also overriding Media3's `media3_notification_small_icon`). The previous icon was a full square and showed as a white square.
+- The README and the site show the logo.
+
 ## v1.2.2
 
 ### Fixed

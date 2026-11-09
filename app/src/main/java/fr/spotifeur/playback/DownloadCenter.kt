@@ -370,7 +370,7 @@ class SpotifeurDownloadService : Service() {
         }
         val title = progress.singleOrNull()?.collection?.item?.title ?: getString(R.string.library_tab_downloads)
         val open = PendingIntent.getActivity(this, 0, Intent(this, MainActivity::class.java), PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
-        return NotificationCompat.Builder(this, CHANNEL).setSmallIcon(R.drawable.ic_spotifeur)
+        return NotificationCompat.Builder(this, CHANNEL).setSmallIcon(R.drawable.ic_stat_spotifeur)
             .setContentTitle(title).setContentText(text).setStyle(NotificationCompat.BigTextStyle().bigText(text))
             .setContentIntent(open).setOngoing(true).setOnlyAlertOnce(true).setSilent(true)
             .setForegroundServiceBehavior(NotificationCompat.FOREGROUND_SERVICE_IMMEDIATE)

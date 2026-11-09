@@ -21,7 +21,8 @@
         android:name=".SpotifeurApplication"
         android:allowBackup="false"
         android:localeConfig="@xml/locales_config"
-        android:icon="@drawable/ic_spotifeur"
+        android:icon="@mipmap/ic_launcher"
+        android:roundIcon="@mipmap/ic_launcher"
         android:label="@string/app_name"
         android:theme="@style/Theme.Spotifeur"
         android:usesCleartextTraffic="false">

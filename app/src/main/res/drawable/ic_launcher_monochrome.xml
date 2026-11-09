@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Generated from design/logo.svg. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="108dp" android:height="108dp"
+    android:viewportWidth="1881" android:viewportHeight="1881">
+    <group android:translateX="313.5" android:translateY="313.5">
+        <path android:fillColor="#FF000000" android:fillType="evenOdd" android:pathData="@string/logo_glyph_path" />
+    </group>
+</vector>
