@@ -1,7 +1,6 @@
 package fr.spotifeur.data
 
 import android.content.Context
-import android.util.AtomicFile
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -12,37 +11,79 @@ import java.io.File
 /** One play: a track and when it started. [fromSpotify] marks plays reported by Spotify for its other apps and devices. */
 data class HistoryEntry(val track: Music, val playedAt: Long, val fromSpotify: Boolean = false)
 
-/** What was played in Spotifeur, whatever the source, most recent first. Stored on the device only. */
+/**
+ * What was played in Spotifeur, whatever the source, most recent first. Stored on the device only,
+ * one JSON line per play: recording a play appends one line instead of rewriting the history, and
+ * the file is read on the first use, off the main thread.
+ */
 class ListeningHistoryStore(context: Context) {
-    private val file = AtomicFile(File(context.applicationContext.filesDir, "listening-history.json"))
-    private val mutable = MutableStateFlow(read())
+    private val directory = context.applicationContext.filesDir
+    private val file = File(directory, "listening-history.jsonl")
+    private val legacy = File(directory, "listening-history.json")
+    private val mutable = MutableStateFlow<List<HistoryEntry>>(emptyList())
     val entries: StateFlow<List<HistoryEntry>> = mutable.asStateFlow()
+    private var loaded = false
+    private var lines = 0
+
+    /** Reads the file once. Call it off the main thread; every other method calls it first. */
+    @Synchronized fun load() {
+        if (loaded) return
+        loaded = true
+        migrateLegacy()
+        val read = runCatching { file.readLines() }.getOrDefault(emptyList()).filter(String::isNotBlank)
+        lines = read.size
+        val stored = read.asReversed().asSequence().take(LIMIT).mapNotNull(::decodeEntry).toList()
+        mutable.value = (mutable.value + stored).take(LIMIT)
+        if (lines > LIMIT + COMPACT_SLACK) compact()
+    }
 
     @Synchronized fun record(track: Music, at: Long = System.currentTimeMillis()) {
-        val stored = track.copy(mediaUri = if (track.source == MusicSource.Local) track.mediaUri else null)
-        mutable.value = (listOf(HistoryEntry(stored, at)) + mutable.value).take(LIMIT)
-        write(mutable.value)
+        load()
+        val entry = HistoryEntry(track.copy(mediaUri = if (track.source == MusicSource.Local) track.mediaUri else null), at)
+        mutable.value = (listOf(entry) + mutable.value).take(LIMIT)
+        runCatching { java.io.FileOutputStream(file, true).use { it.write((encodeEntry(entry) + "\n").toByteArray()) } }
+        if (++lines > LIMIT + COMPACT_SLACK) compact()
     }
 
-    @Synchronized fun clear() { mutable.value = emptyList(); write(emptyList()) }
+    @Synchronized fun clear() {
+        loaded = true; lines = 0
+        mutable.value = emptyList()
+        file.delete(); legacy.delete()
+    }
 
-    private fun read(): List<HistoryEntry> = runCatching {
-        val array = JSONArray(file.openRead().bufferedReader().use { it.readText() })
-        (0 until array.length()).mapNotNull { index ->
-            val entry = array.getJSONObject(index)
-            decodePins(JSONArray().put(entry).toString()).firstOrNull()?.let { HistoryEntry(it, entry.optLong("playedAt")) }
+    /** Keeps the newest [LIMIT] lines; runs once every [COMPACT_SLACK] plays at most. */
+    private fun compact() {
+        val kept = mutable.value.asReversed()
+        val temporary = File(directory, "listening-history.jsonl.tmp")
+        runCatching {
+            temporary.writeText(kept.joinToString("") { encodeEntry(it) + "\n" })
+            if (temporary.renameTo(file)) lines = kept.size
         }
-    }.getOrDefault(emptyList())
-
-    private fun write(entries: List<HistoryEntry>) {
-        val array = JSONArray(encodePins(entries.map(HistoryEntry::track)))
-        entries.forEachIndexed { index, entry -> array.getJSONObject(index).put("playedAt", entry.playedAt) }
-        val stream = file.startWrite()
-        try { stream.write(array.toString().toByteArray()); file.finishWrite(stream) }
-        catch (failure: Exception) { file.failWrite(stream); throw failure }
     }
 
-    private companion object { const val LIMIT = 2000 }
+    /** v1.2.0 and v1.2.1 stored one JSON array. */
+    private fun migrateLegacy() {
+        if (!legacy.exists()) return
+        runCatching {
+            val array = JSONArray(legacy.readText())
+            val old = (0 until array.length()).mapNotNull { decodeEntry(array.getJSONObject(it).toString()) }
+            if (!file.exists()) file.writeText(old.asReversed().joinToString("") { encodeEntry(it) + "\n" })
+        }
+        legacy.delete()
+    }
+
+    private fun encodeEntry(entry: HistoryEntry): String =
+        JSONArray(encodePins(listOf(entry.track))).getJSONObject(0).put("playedAt", entry.playedAt).toString()
+
+    private fun decodeEntry(line: String): HistoryEntry? = runCatching {
+        val json = JSONObject(line)
+        decodePins("[$line]").firstOrNull()?.let { HistoryEntry(it, json.optLong("playedAt")) }
+    }.getOrNull()
+
+    private companion object {
+        const val LIMIT = 2000
+        const val COMPACT_SLACK = 500
+    }
 }
 
 /** A context Spotify remembers as played, with the last track played in it. */

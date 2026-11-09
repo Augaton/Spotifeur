@@ -32,8 +32,6 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
-import androidx.compose.runtime.rememberCoroutineScope
-import kotlinx.coroutines.launch
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -48,6 +46,9 @@ import kotlinx.coroutines.delay
 import racra.compose.smooth_corner_rect_library.AbsoluteSmoothCornerShape
 
 private enum class PlaybackButtonType { NONE, PREVIOUS, PLAY_PAUSE, NEXT }
+
+/** How long a skip button stays enlarged after a press. */
+private const val SKIP_PRESS_MS = 280L
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
@@ -86,7 +87,6 @@ fun AnimatedPlaybackControls(
     var playPauseVisualState by remember { mutableStateOf(isPlaying) }
     var pendingPlayPauseState by remember { mutableStateOf<Boolean?>(null) }
     val hapticFeedback = LocalHapticFeedback.current
-    val coroutineScope = rememberCoroutineScope()
 
     val motionScheme = remember { MotionScheme.expressive() }
     val defaultSpatialDpSpec = remember { motionScheme.defaultSpatialSpec<Dp>() }
@@ -94,7 +94,7 @@ fun AnimatedPlaybackControls(
     LaunchedEffect(lastClicked, clickTrigger) {
         if (lastClicked != null) {
             val delayTime = when (lastClicked) {
-                PlaybackButtonType.NEXT, PlaybackButtonType.PREVIOUS -> 600L
+                PlaybackButtonType.NEXT, PlaybackButtonType.PREVIOUS -> SKIP_PRESS_MS
                 else -> releaseDelay
             }
             delay(delayTime)
@@ -156,10 +156,8 @@ fun AnimatedPlaybackControls(
                     .clickable {
                         lastClicked = PlaybackButtonType.PREVIOUS
                         clickTrigger++
-                        coroutineScope.launch {
-                            delay(180)
-                            onPrevious()
-                        }
+                        // The command goes out at once; the press animation runs alongside.
+                        onPrevious()
                     },
                 contentAlignment = Alignment.Center
             ) {
@@ -229,10 +227,8 @@ fun AnimatedPlaybackControls(
                     .clickable {
                         lastClicked = PlaybackButtonType.NEXT
                         clickTrigger++
-                        coroutineScope.launch {
-                            delay(180)
-                            onNext()
-                        }
+                        // The command goes out at once; the press animation runs alongside.
+                        onNext()
                     },
                 contentAlignment = Alignment.Center
             ) {

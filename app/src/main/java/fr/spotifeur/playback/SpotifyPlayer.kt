@@ -115,8 +115,39 @@ class SpotifyPlayer(context: Context, scope: CoroutineScope) : AutoCloseable {
         val (shown, earlier, later) = window(tracks, start)
         before = earlier; after = later
         queueChanged = true
-        player.setMediaItems(shown.map(::mediaItem), start - windowStart(start), 0L); player.prepare(); player.play()
+        // As in Spotify, the tracks the user queued survive a new context and play right after its first track.
+        val queued = userQueue(player)
+        val first = start - windowStart(start)
+        val items = shown.map(::mediaItem).toMutableList().apply { addAll(first + 1, queued.map { mediaItem(it, queued = true) }) }
+        player.setMediaItems(items, first, 0L); player.prepare(); player.play()
     }
+    /** The tracks the user queued, waiting right after the current one. */
+    private fun userQueue(player: Player): List<Music> {
+        val count = player.mediaItemCount
+        if (count == 0) return emptyList()
+        return (player.currentMediaItemIndex + 1 until count).asSequence()
+            .map(player::getMediaItemAt).takeWhile(MediaItem::isQueued).map(::music).toList()
+    }
+    /**
+     * Spotify's "Add to queue": after the current track and after what the user already queued,
+     * before the rest of the playlist or album. Queued tracks are never shuffled.
+     */
+    fun addToQueue(tracks: List<Music>) { controller?.let { player ->
+        val valid = tracks.filter(Music::isPlayableTrack)
+        if (valid.isEmpty()) return
+        if (player.mediaItemCount == 0) { play(valid, 0); return }
+        val position = player.currentMediaItemIndex + 1 + userQueue(player).size
+        player.addMediaItems(position, valid.map { mediaItem(it, queued = true) })
+        queueChanged = true; update(player)
+    } }
+    /** "Play next": at the head of the user's queue. */
+    fun playNext(tracks: List<Music>) { controller?.let { player ->
+        val valid = tracks.filter(Music::isPlayableTrack)
+        if (valid.isEmpty()) return
+        if (player.mediaItemCount == 0) { play(valid, 0); return }
+        player.addMediaItems(player.currentMediaItemIndex + 1, valid.map { mediaItem(it, queued = true) })
+        queueChanged = true; update(player)
+    } }
     /** The whole context and the position of the current track in it. */
     fun context(): Pair<List<Music>, Int> = (before + queue) + after to before.size + mutableState.value.index
     /** Keeps a margin of tracks on both sides of the current one, and the player small. */
@@ -155,8 +186,12 @@ class SpotifyPlayer(context: Context, scope: CoroutineScope) : AutoCloseable {
         if (failed) player.prepare()
     } }
     fun shuffle() { controller?.let { player ->
-        val items = before + (0 until player.mediaItemCount).map { music(player.getMediaItemAt(it)) } + after
-        val current = before.size + player.currentMediaItemIndex
+        val queued = userQueue(player)
+        val window = (0 until player.mediaItemCount).map { music(player.getMediaItemAt(it)) }
+        val local = player.currentMediaItemIndex
+        // The user's queue stays apart: never shuffled, always first after the current track.
+        val items = before + window.take(local + 1) + window.drop(local + 1 + queued.size) + after
+        val current = before.size + local
         ShuffleMemory.enabled = !ShuffleMemory.enabled
         ShuffleMemory.save(appContext)
         val original = ShuffleMemory.original
@@ -164,26 +199,27 @@ class SpotifyPlayer(context: Context, scope: CoroutineScope) : AutoCloseable {
             items.isEmpty() -> ShuffleMemory.original = null
             ShuffleMemory.enabled -> {
                 ShuffleMemory.original = items
-                replaceAroundCurrent(player, emptyList(), (items.take(current) + items.drop(current + 1)).shuffled())
+                replaceAroundCurrent(player, emptyList(), (items.take(current) + items.drop(current + 1)).shuffled(), queued)
             }
             original != null -> {
                 ShuffleMemory.original = null
                 val position = original.indexOfFirst { it.id == items.getOrNull(current)?.id }
-                if (position >= 0) replaceAroundCurrent(player, original.take(position), original.drop(position + 1))
+                if (position >= 0) replaceAroundCurrent(player, original.take(position), original.drop(position + 1), queued)
             }
         }
         queueChanged = true
         update(player)
     } }
     /** The current item is never removed, so its audio keeps playing while the queue changes around it. */
-    private fun replaceAroundCurrent(player: Player, earlier: List<Music>, later: List<Music>) {
+    private fun replaceAroundCurrent(player: Player, earlier: List<Music>, later: List<Music>, queued: List<Music> = emptyList()) {
         val current = player.currentMediaItemIndex
         if (current + 1 < player.mediaItemCount) player.removeMediaItems(current + 1, player.mediaItemCount)
         if (current > 0) player.removeMediaItems(0, current)
         val shownAfter = later.take(WINDOW_AHEAD)
         val shownBefore = earlier.takeLast(WINDOW_BEHIND)
         before = earlier.dropLast(WINDOW_BEHIND); after = later.drop(WINDOW_AHEAD)
-        if (shownAfter.isNotEmpty()) player.addMediaItems(1, shownAfter.map(::mediaItem))
+        val following = queued.map { mediaItem(it, queued = true) } + shownAfter.map(::mediaItem)
+        if (following.isNotEmpty()) player.addMediaItems(1, following)
         if (shownBefore.isNotEmpty()) player.addMediaItems(0, shownBefore.map(::mediaItem))
     }
     fun repeat() { controller?.let { it.repeatMode = (it.repeatMode + 1) % 3 } }
@@ -205,11 +241,8 @@ class SpotifyPlayer(context: Context, scope: CoroutineScope) : AutoCloseable {
     fun insert(index: Int, tracks: List<Music>) {
         val valid = tracks.filter(Music::isPlayableTrack)
         if (valid.isEmpty()) return
-        ShuffleMemory.original = ShuffleMemory.original?.plus(valid)
         controller?.let {
-            // "Add to queue" goes after the whole context, as before the queue was windowed.
-            if (index >= it.mediaItemCount && after.isNotEmpty()) after = after + valid
-            else it.addMediaItems(index.coerceIn(0, it.mediaItemCount), valid.map(::mediaItem))
+            it.addMediaItems(index.coerceIn(0, it.mediaItemCount), valid.map(::mediaItem))
             queueChanged = true; update(it)
         }
     }
@@ -289,8 +322,12 @@ internal fun playbackErrorMessage(code: Int): String = when (code) {
 private fun Music.isPlayableTrack(): Boolean = kind == MusicKind.Track &&
     (id.startsWith("spotify:track:") || id.startsWith(fr.spotifeur.data.youtube.YTM_TRACK_PREFIX) || (isLocalTrack && mediaUri != null))
 
+/** Set on the tracks the user queued ("Add to queue", "Play next"). */
+private const val QUEUED = "queued"
+private fun MediaItem.isQueued(): Boolean = mediaMetadata.extras?.getBoolean(QUEUED) == true
+
 @androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
-private fun mediaItem(track: Music): MediaItem {
+private fun mediaItem(track: Music, queued: Boolean = false): MediaItem {
     // YouTube Music tracks, and Spotify tracks without a Spotify account, are read from YouTube Music.
     val youtube = YouTubeUris.of(track, fr.spotifeur.data.SpotifyAccount.signedIn)
     val spotify = youtube == null && !track.isLocalTrack
@@ -306,6 +343,7 @@ private fun mediaItem(track: Music): MediaItem {
             .setExtras(Bundle().apply {
                 putInt("duration", track.durationMs); putInt("artwork", track.artwork)
                 putString("album", track.album); putString("mediaUri", track.mediaUri); putString("quality", track.quality)
+                if (queued) putBoolean(QUEUED, true)
             }).build()).build()
 }
 private fun music(item: MediaItem) = musicOf(item)

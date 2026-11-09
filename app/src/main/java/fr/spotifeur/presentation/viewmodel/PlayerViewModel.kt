@@ -387,11 +387,11 @@ class PlayerViewModel(val model: SpotifeurModel, private val scope: CoroutineSco
         playSongs(tracks.map { it.toSong() }, tracks.first().toSong(), item.title)
     }
     fun addItemToQueue(item: Music) = withTracks(item) { tracks ->
-        model.player.insert(Int.MAX_VALUE, tracks)
+        model.player.addToQueue(tracks)
         sendToast(context.getString(R.string.queue_added))
     }
     fun addItemNext(item: Music) = withTracks(item) { tracks ->
-        model.player.insert(model.player.state.value.index + 1, tracks)
+        model.player.playNext(tracks)
         sendToast(context.getString(R.string.queue_next))
     }
 
@@ -427,11 +427,11 @@ class PlayerViewModel(val model: SpotifeurModel, private val scope: CoroutineSco
 
     // Queue -------------------------------------------------------------------------------------
     fun addSongToQueue(song: Song) {
-        model.player.insert(Int.MAX_VALUE, listOf(song.toMusic()))
+        model.player.addToQueue(listOf(song.toMusic()))
         sendToast(context.getString(R.string.queue_added))
     }
     fun addSongNextToQueue(song: Song) {
-        model.player.insert(model.player.state.value.index + 1, listOf(song.toMusic()))
+        model.player.playNext(listOf(song.toMusic()))
         sendToast(context.getString(R.string.queue_next))
     }
 

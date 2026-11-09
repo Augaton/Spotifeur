@@ -571,6 +571,7 @@ class SpotifeurModel(private val app: Application) : AndroidViewModel(app) {
 
     /** Spotifeur's plays merged with the tracks Spotify reports for the account's other apps and devices. */
     internal suspend fun fullListeningHistory(): List<fr.spotifeur.data.HistoryEntry> {
+        withContext(Dispatchers.IO) { listeningHistory.load() }
         val local = listeningHistory.entries.value
         val source = catalog ?: return local
         if (!online.value) return local

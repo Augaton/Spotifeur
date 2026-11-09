@@ -49,6 +49,7 @@ import fr.spotifeur.presentation.components.SongOptionsHost
 import fr.spotifeur.presentation.components.subcomps.EnhancedSongListItem
 import fr.spotifeur.ui.theme.GoogleSansRounded
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.launch
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
@@ -68,6 +69,7 @@ internal fun HistoryScreen(model: SpotifeurModel, navController: NavHostControll
     var refreshing by remember { mutableStateOf(false) }
     var clearing by remember { mutableStateOf(false) }
     var selected by remember { mutableStateOf<Song?>(null) }
+    val scope = androidx.compose.runtime.rememberCoroutineScope()
     LaunchedEffect(local, revision) {
         refreshing = entries != null
         try { entries = model.fullListeningHistory() }
@@ -160,7 +162,7 @@ internal fun HistoryScreen(model: SpotifeurModel, navController: NavHostControll
         onDismissRequest = { clearing = false },
         title = { Text(stringResource(R.string.history_clear)) },
         text = { Text(stringResource(R.string.history_clear_message)) },
-        confirmButton = { TextButton(onClick = { model.listeningHistory.clear(); clearing = false }) { Text(stringResource(R.string.history_clear_confirm)) } },
+        confirmButton = { TextButton(onClick = { clearing = false; scope.launch(kotlinx.coroutines.Dispatchers.IO) { model.listeningHistory.clear() } }) { Text(stringResource(R.string.history_clear_confirm)) } },
         dismissButton = { TextButton(onClick = { clearing = false }) { Text(stringResource(android.R.string.cancel)) } },
     )
 }
