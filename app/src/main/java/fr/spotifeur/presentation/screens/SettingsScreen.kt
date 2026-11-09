@@ -19,6 +19,12 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.ui.res.painterResource
 import androidx.compose.material.icons.rounded.Restore
+import androidx.compose.material.icons.rounded.Home
+import androidx.compose.material.icons.rounded.Tune
+import androidx.compose.foundation.layout.asPaddingValues
+import androidx.compose.foundation.layout.navigationBars
+import androidx.compose.material.icons.rounded.KeyboardArrowUp
+import androidx.compose.material.icons.rounded.KeyboardArrowDown
 import androidx.compose.material.icons.rounded.Download
 import androidx.compose.material.icons.rounded.Image
 import androidx.compose.material.icons.rounded.CloudOff
@@ -113,7 +119,10 @@ private fun SettingsScaffold(title: String, navController: NavHostController, co
                 .fillMaxSize()
                 .padding(inner)
                 .verticalScroll(rememberScrollState())
-                .padding(PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 48.dp)),
+                // Room for the mini player and the navigation bar under the last item.
+                .padding(PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp,
+                    bottom = 32.dp + fr.spotifeur.presentation.components.MiniPlayerHeight +
+                        androidx.compose.foundation.layout.WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding())),
             verticalArrangement = Arrangement.spacedBy(4.dp),
             content = content,
         )
@@ -146,12 +155,17 @@ fun SettingsScreen(model: SpotifeurModel, navController: NavHostController) {
             leadingIcon = { Icon(Icons.Rounded.Download, null, tint = MaterialTheme.colorScheme.secondary) })
         fun open(id: String) = navController.navigateSafely(Screen.SettingsCategory.createRoute(id))
         CategoryRow(stringResource(R.string.settings_category_appearance_title), stringResource(R.string.settings_category_appearance_subtitle), Icons.Rounded.Palette) { open("appearance") }
+        CategoryRow(stringResource(R.string.settings_home_title), stringResource(R.string.settings_home_subtitle), Icons.Rounded.Home) { open("home") }
+        CategoryRow(stringResource(R.string.settings_pages_title), stringResource(R.string.settings_pages_subtitle), Icons.Rounded.Tune) { open("pages") }
         CategoryRow(stringResource(R.string.settings_category_playback_title), stringResource(R.string.settings_category_playback_subtitle), Icons.Rounded.MusicNote) { open("playback") }
         CategoryRow(stringResource(R.string.settings_category_behavior_title), stringResource(R.string.settings_category_behavior_subtitle), Icons.Rounded.TouchApp) { open("behavior") }
         CategoryRow(stringResource(R.string.settings_category_equalizer_title), stringResource(R.string.settings_category_equalizer_subtitle), Icons.Rounded.GraphicEq) { navController.navigateSafely(Screen.Equalizer.route) }
         CategoryRow(stringResource(R.string.settings_storage_title), stringResource(R.string.settings_storage_subtitle), Icons.Rounded.Storage) { open("storage") }
         CategoryRow(stringResource(R.string.settings_category_backup_title), stringResource(R.string.settings_category_backup_subtitle), Icons.Rounded.Backup) { open("backup") }
-        CategoryRow(stringResource(R.string.settings_account_title), stringResource(R.string.settings_account_subtitle), Icons.AutoMirrored.Rounded.Logout) { open("account") }
+        val discovery by model.discovery.collectAsStateWithLifecycle()
+        CategoryRow(stringResource(R.string.settings_account_title),
+            stringResource(if (discovery.spotifyEnabled) R.string.settings_account_subtitle else R.string.settings_account_guest_subtitle),
+            Icons.AutoMirrored.Rounded.Logout) { open("account") }
     }
 }
 
@@ -165,6 +179,8 @@ fun SettingsCategoryScreen(model: SpotifeurModel, navController: NavHostControll
         "audio_cache" -> AudioCacheScreen(model, navController)
         "backup" -> BackupSettings(model, navController)
         "account" -> AccountSettings(model, navController)
+        "home" -> HomeSettings(model, navController)
+        "pages" -> PageActionsSettings(model, navController)
     }
 }
 
@@ -200,6 +216,10 @@ private fun AppearanceSettings(model: SpotifeurModel, navController: NavHostCont
             SwitchSettingItem(stringResource(R.string.settings_smooth_corners_title), stringResource(R.string.settings_smooth_corners_subtitle), s.useSmoothCorners, { v -> update { it.copy(useSmoothCorners = v) } }, leadingIcon = { Icon(painterResource(R.drawable.rounded_rounded_corner_24), null, tint = MaterialTheme.colorScheme.secondary) })
             SwitchSettingItem(stringResource(R.string.settings_disable_blur_all_over_title), stringResource(R.string.settings_disable_blur_all_over_subtitle), s.disableBlur, { v -> update { it.copy(disableBlur = v) } }, leadingIcon = { Icon(Icons.Rounded.BlurOff, null, tint = MaterialTheme.colorScheme.secondary) })
             SwitchSettingItem(stringResource(R.string.settings_show_scrollbar_title), stringResource(R.string.settings_show_scrollbar_subtitle), s.showScrollbar, { v -> update { it.copy(showScrollbar = v) } }, leadingIcon = { Icon(Icons.Rounded.UnfoldMore, null, tint = MaterialTheme.colorScheme.secondary) })
+        }
+        SettingsSection(title = stringResource(R.string.settings_lists_section), icon = {}) {
+            SwitchSettingItem(stringResource(R.string.settings_compact_lists_title), stringResource(R.string.settings_compact_lists_subtitle), s.compactLists, { v -> update { it.copy(compactLists = v) } }, leadingIcon = { Icon(painterResource(R.drawable.rounded_view_week_24), null, tint = MaterialTheme.colorScheme.secondary) })
+            SwitchSettingItem(stringResource(R.string.settings_source_badges_title), stringResource(R.string.settings_source_badges_subtitle), s.showSourceBadges, { v -> update { it.copy(showSourceBadges = v) } }, leadingIcon = { Icon(Icons.Outlined.Style, null, tint = MaterialTheme.colorScheme.secondary) })
         }
         SettingsSection(title = stringResource(R.string.settings_now_playing_section), icon = {}) {
             ThemeSelectorItem(
@@ -421,12 +441,141 @@ private fun BackupSettings(model: SpotifeurModel, navController: NavHostControll
 
 @Composable
 private fun AccountSettings(model: SpotifeurModel, navController: NavHostController) {
+    val discovery by model.discovery.collectAsStateWithLifecycle()
     SettingsScaffold(stringResource(R.string.settings_account_title), navController) {
-        SettingsItem(
+        if (!discovery.spotifyEnabled) SettingsItem(
+            title = stringResource(R.string.settings_account_signin_title),
+            subtitle = stringResource(R.string.settings_account_signin_subtitle),
+            leadingIcon = { Icon(Icons.Rounded.MusicNote, null, tint = MaterialTheme.colorScheme.secondary) },
+            onClick = { model.showSignIn() },
+        ) else SettingsItem(
             title = stringResource(R.string.settings_logout_title),
             subtitle = stringResource(R.string.settings_logout_subtitle),
             leadingIcon = { Icon(Icons.AutoMirrored.Rounded.Logout, null, tint = MaterialTheme.colorScheme.error) },
             onClick = { model.disconnectSpotify() },
         )
+    }
+}
+
+@Composable
+private fun shelfName(shelf: fr.spotifeur.data.preferences.HomeShelf): String = stringResource(when (shelf) {
+    fr.spotifeur.data.preferences.HomeShelf.PINS -> R.string.home_pins
+    fr.spotifeur.data.preferences.HomeShelf.RECENT -> R.string.home_recent
+    fr.spotifeur.data.preferences.HomeShelf.DOWNLOADS -> R.string.home_downloads
+    fr.spotifeur.data.preferences.HomeShelf.LIKED -> R.string.liked_title
+    fr.spotifeur.data.preferences.HomeShelf.PLAYLISTS -> R.string.home_playlists
+    fr.spotifeur.data.preferences.HomeShelf.MULTI_SERVICE -> R.string.home_multi_service
+    fr.spotifeur.data.preferences.HomeShelf.SPOTIFY_PLAYLISTS -> R.string.home_spotify_playlists
+    fr.spotifeur.data.preferences.HomeShelf.ALBUMS -> R.string.home_albums
+    fr.spotifeur.data.preferences.HomeShelf.ARTISTS -> R.string.home_artists
+    fr.spotifeur.data.preferences.HomeShelf.LOCAL_FILES -> R.string.home_local_files
+})
+
+@Composable
+private fun styleName(style: fr.spotifeur.data.preferences.ShelfStyle): String = stringResource(when (style) {
+    fr.spotifeur.data.preferences.ShelfStyle.CAROUSEL -> R.string.shelf_style_carousel
+    fr.spotifeur.data.preferences.ShelfStyle.LARGE -> R.string.shelf_style_large
+    fr.spotifeur.data.preferences.ShelfStyle.GRID -> R.string.shelf_style_grid
+    fr.spotifeur.data.preferences.ShelfStyle.LIST -> R.string.shelf_style_list
+    fr.spotifeur.data.preferences.ShelfStyle.PILLS -> R.string.shelf_style_pills
+    fr.spotifeur.data.preferences.ShelfStyle.COLLAGE -> R.string.shelf_style_collage
+    fr.spotifeur.data.preferences.ShelfStyle.CARD -> R.string.shelf_style_card
+})
+
+/** Which shelves the home screen shows, in which order, with which layout and how many items. */
+@OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
+@Composable
+private fun HomeSettings(model: SpotifeurModel, navController: NavHostController) {
+    val s by model.ui.settings.collectAsStateWithLifecycle()
+    val shelves = s.homeLayout
+    fun save(list: List<fr.spotifeur.data.preferences.ShelfConfig>) =
+        model.ui.updateSettings { it.copy(homeShelves = fr.spotifeur.data.preferences.HomeLayout.encode(list)) }
+    fun change(index: Int, update: (fr.spotifeur.data.preferences.ShelfConfig) -> fr.spotifeur.data.preferences.ShelfConfig) =
+        save(shelves.mapIndexed { position, config -> if (position == index) update(config) else config })
+    fun move(from: Int, to: Int) { if (to in shelves.indices) save(shelves.toMutableList().apply { add(to, removeAt(from)) }) }
+    SettingsScaffold(stringResource(R.string.settings_home_title), navController) {
+        Text(stringResource(R.string.settings_home_description), Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+            style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        shelves.forEachIndexed { index, config ->
+            Surface(color = MaterialTheme.colorScheme.surfaceContainer, shape = RoundedCornerShape(24.dp), modifier = Modifier.fillMaxWidth()) {
+                Column(Modifier.padding(start = 16.dp, end = 8.dp, top = 8.dp, bottom = 12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(shelfName(config.shelf), Modifier.weight(1f), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                        androidx.compose.material3.IconButton(onClick = { move(index, index - 1) }, enabled = index > 0) {
+                            Icon(Icons.Rounded.KeyboardArrowUp, stringResource(R.string.shelf_move_up))
+                        }
+                        androidx.compose.material3.IconButton(onClick = { move(index, index + 1) }, enabled = index < shelves.lastIndex) {
+                            Icon(Icons.Rounded.KeyboardArrowDown, stringResource(R.string.shelf_move_down))
+                        }
+                        androidx.compose.material3.Switch(config.visible, { visible -> change(index) { it.copy(visible = visible) } })
+                    }
+                    if (config.visible) {
+                        if (config.shelf.styles.size > 1) androidx.compose.foundation.layout.FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                            config.shelf.styles.forEach { style ->
+                                androidx.compose.material3.FilterChip(selected = config.style == style, onClick = { change(index) { it.copy(style = style) } },
+                                    label = { Text(styleName(style)) })
+                            }
+                        }
+                        if (config.shelf.counts) androidx.compose.foundation.layout.FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp),
+                            itemVerticalAlignment = Alignment.CenterVertically) {
+                            Text(stringResource(R.string.shelf_items), Modifier.padding(end = 4.dp), style = MaterialTheme.typography.labelLarge)
+                            fr.spotifeur.data.preferences.HomeLayout.COUNTS.forEach { count ->
+                                androidx.compose.material3.FilterChip(selected = config.count == count, onClick = { change(index) { it.copy(count = count) } },
+                                    label = { Text(count.toString()) })
+                            }
+                        }
+                        if (config.style != fr.spotifeur.data.preferences.ShelfStyle.CARD && config.style != fr.spotifeur.data.preferences.ShelfStyle.COLLAGE) Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(stringResource(R.string.shelf_show_title), Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium)
+                            androidx.compose.material3.Switch(config.showTitle, { shown -> change(index) { it.copy(showTitle = shown) } })
+                        }
+                    }
+                }
+            }
+        }
+        androidx.compose.material3.TextButton(onClick = { model.ui.updateSettings { it.copy(homeShelves = "") } }, modifier = Modifier.fillMaxWidth()) {
+            Text(stringResource(R.string.shelf_reset))
+        }
+    }
+}
+
+/** Which buttons album and playlist pages show in their bar, in which order; the others go to the ⋮ menu. */
+@Composable
+private fun PageActionsSettings(model: SpotifeurModel, navController: NavHostController) {
+    val s by model.ui.settings.collectAsStateWithLifecycle()
+    SettingsScaffold(stringResource(R.string.settings_pages_title), navController) {
+        Text(stringResource(R.string.settings_pages_description), Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+            style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        listOf(fr.spotifeur.data.preferences.DetailPage.ALBUM to R.string.settings_pages_album,
+            fr.spotifeur.data.preferences.DetailPage.PLAYLIST to R.string.settings_pages_playlist).forEach { (page, title) ->
+            val slots = s.actions(page)
+            fun save(list: List<fr.spotifeur.data.preferences.ActionSlot>) = model.ui.updateSettings {
+                val encoded = fr.spotifeur.data.preferences.DetailActions.encode(list)
+                if (page == fr.spotifeur.data.preferences.DetailPage.ALBUM) it.copy(albumActions = encoded) else it.copy(playlistActions = encoded)
+            }
+            fun move(from: Int, to: Int) { if (to in slots.indices) save(slots.toMutableList().apply { add(to, removeAt(from)) }) }
+            Text(stringResource(title), Modifier.padding(start = 8.dp, top = 16.dp, bottom = 4.dp),
+                style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.SemiBold)
+            slots.forEachIndexed { index, slot ->
+                Surface(color = MaterialTheme.colorScheme.surfaceContainer, shape = RoundedCornerShape(20.dp), modifier = Modifier.fillMaxWidth()) {
+                    Row(Modifier.padding(start = 16.dp, end = 8.dp, top = 4.dp, bottom = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Column(Modifier.weight(1f)) {
+                            Text(actionName(slot.action), style = MaterialTheme.typography.bodyLarge)
+                            Text(stringResource(if (slot.shown) R.string.settings_pages_in_bar else R.string.settings_pages_in_menu),
+                                style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                        androidx.compose.material3.IconButton(onClick = { move(index, index - 1) }, enabled = index > 0) {
+                            Icon(Icons.Rounded.KeyboardArrowUp, stringResource(R.string.shelf_move_up))
+                        }
+                        androidx.compose.material3.IconButton(onClick = { move(index, index + 1) }, enabled = index < slots.lastIndex) {
+                            Icon(Icons.Rounded.KeyboardArrowDown, stringResource(R.string.shelf_move_down))
+                        }
+                        androidx.compose.material3.Switch(slot.shown, { shown -> save(slots.mapIndexed { i, it -> if (i == index) it.copy(shown = shown) else it }) })
+                    }
+                }
+            }
+        }
+        androidx.compose.material3.TextButton(onClick = { model.ui.updateSettings { it.copy(albumActions = "", playlistActions = "") } }, modifier = Modifier.fillMaxWidth()) {
+            Text(stringResource(R.string.settings_pages_reset))
+        }
     }
 }

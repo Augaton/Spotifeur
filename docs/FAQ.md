@@ -2,7 +2,7 @@
 
 ## Do I need a Spotify account?
 
-Yes. Spotifeur is a client for your Spotify account: it shows your library and plays what your account is allowed to play. It was tested with a Premium account. Free accounts were not tested.
+No. Without an account, Spotifeur plays the YouTube Music catalog and the audio files on your phone, and Spotify tracks of imported playlists play from their closest YouTube Music match. With an account, it shows your Spotify library and plays what your account is allowed to play. It was tested with a Premium account. Free accounts were not tested.
 
 ## Do I need the official Spotify app installed?
 

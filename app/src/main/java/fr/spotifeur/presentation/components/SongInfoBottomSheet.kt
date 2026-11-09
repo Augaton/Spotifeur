@@ -62,6 +62,9 @@ import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material.icons.rounded.Schedule
 import androidx.compose.material.icons.rounded.Share
 import androidx.compose.material.icons.rounded.Edit
+import androidx.compose.material.icons.rounded.Delete
+import androidx.compose.material.icons.rounded.TableChart
+import fr.spotifeur.data.isLocalPlaylist
 import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material.icons.rounded.Menu
 import androidx.compose.material3.*
@@ -141,6 +144,9 @@ fun SongInfoBottomSheet(
     val context = LocalContext.current
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val infoShape = RoundedCornerShape(16.dp)
+    val discovery by playerViewModel.model.discovery.collectAsStateWithLifecycle()
+    // Likes, radios, albums and artists are Spotify pages: they need a Spotify track and an account.
+    val spotifyPages = song.source == fr.spotifeur.data.MusicSource.Spotify && discovery.spotifyEnabled
     ModalBottomSheet(onDismissRequest = onDismiss, sheetState = sheetState) {
         Column(
             modifier = Modifier
@@ -154,7 +160,7 @@ fun SongInfoBottomSheet(
             Row1Actions(
                 isFavorite = isFavorite,
                 onPlaySong = { onPlaySong(); onDismiss() },
-                onToggleFavorite = if (song.isLocal) null else onToggleFavorite,
+                onToggleFavorite = if (spotifyPages) onToggleFavorite else null,
                 onShareClick = if (song.isLocal) null else ({ context.shareMusic(song.toMusic()) }),
                 playButtonShape = OptionsPlayButtonShape,
                 evenCornerRadiusElems = 26.dp
@@ -163,7 +169,7 @@ fun SongInfoBottomSheet(
             RadioAndPinRow(
                 item = song.toMusic(),
                 playerViewModel = playerViewModel,
-                onStartRadio = if (song.isLocal) null else onStartRadio,
+                onStartRadio = if (spotifyPages) onStartRadio else null,
             )
             onRemoveFromPlaylist?.let { remove ->
                 TextButton(onClick = { remove(); onDismiss() }, modifier = Modifier.fillMaxWidth()) {
@@ -183,7 +189,7 @@ fun SongInfoBottomSheet(
                 icon = Icons.Rounded.Album,
                 iconDescription = stringResource(R.string.song_info_album_label),
                 shape = infoShape,
-                onClick = onNavigateToAlbum,
+                onClick = if (spotifyPages) onNavigateToAlbum else null,
             )
             SongInfoSegmentedListItem(
                 headline = stringResource(R.string.song_info_artist_label),
@@ -191,7 +197,7 @@ fun SongInfoBottomSheet(
                 icon = Icons.Rounded.Person,
                 iconDescription = stringResource(R.string.song_info_artist_label),
                 shape = infoShape,
-                onClick = onNavigateToArtist,
+                onClick = if (spotifyPages) onNavigateToArtist else null,
             )
             if (removeFromListTrigger != null) {
                 TextButton(onClick = removeFromListTrigger, modifier = Modifier.fillMaxWidth()) {
@@ -257,7 +263,7 @@ private fun RadioAndPinRow(item: Music, playerViewModel: PlayerViewModel, onStar
     val isPinned = pins.any { it.id == item.id }
     val downloads by playerViewModel.downloadCollections.collectAsStateWithLifecycle()
     val preparations by playerViewModel.downloadPreparations.collectAsStateWithLifecycle()
-    val isLocal = item.id.startsWith("local:") && !item.id.startsWith("local:playlist:")
+    val isLocal = fr.spotifeur.data.isLocalTrackId(item.id)
     if (!isLocal) {
         val entry = downloads[item.id]
         FilledTonalButton(
@@ -366,22 +372,60 @@ fun EntityOptionsSheet(
                 Text(stringResource(R.string.common_shuffle), maxLines = 1)
             }
             RadioAndPinRow(item, playerViewModel, if (isLiked || item.id.startsWith("local:")) null else onStartRadio)
-            SongInfoSegmentedListItem(
-                headline = when (item.kind) {
-                    MusicKind.Artist -> stringResource(R.string.open_artist)
-                    MusicKind.Album -> stringResource(R.string.open_album)
-                    else -> stringResource(R.string.open_playlist)
-                },
-                supporting = item.title,
-                icon = when (item.kind) {
-                    MusicKind.Artist -> Icons.Rounded.Person
-                    MusicKind.Album -> Icons.Rounded.Album
-                    else -> Icons.Rounded.MusicNote
-                },
-                iconDescription = item.kind.label,
-                shape = RoundedCornerShape(16.dp),
+            FilledTonalButton(
                 onClick = { onDismiss(); onOpen() },
-            )
+                modifier = Modifier.fillMaxWidth().height(58.dp),
+                shape = RoundedCornerShape(26.dp),
+            ) {
+                Icon(
+                    when (item.kind) {
+                        MusicKind.Artist -> Icons.Rounded.Person
+                        MusicKind.Album -> Icons.Rounded.Album
+                        else -> Icons.AutoMirrored.Rounded.QueueMusic
+                    }, contentDescription = null,
+                )
+                Spacer(Modifier.width(8.dp))
+                Text(
+                    when (item.kind) {
+                        MusicKind.Artist -> stringResource(R.string.open_artist)
+                        MusicKind.Album -> stringResource(R.string.open_album)
+                        else -> stringResource(R.string.open_playlist)
+                    }, maxLines = 1,
+                )
+            }
+            if (item.kind == MusicKind.Playlist) {
+                val library by playerViewModel.model.library.collectAsStateWithLifecycle()
+                val discovery by playerViewModel.model.discovery.collectAsStateWithLifecycle()
+                val export = rememberPlaylistCsvExport(playerViewModel.model)
+                var deleting by remember { mutableStateOf(false) }
+                val inLibrary = item.isLocalPlaylist || (discovery.spotifyEnabled && item.id.startsWith("spotify:playlist:") &&
+                    library.content?.playlists?.any { it.id == item.id } == true)
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    FilledTonalButton(
+                        onClick = { export(item) },
+                        modifier = Modifier.weight(1f).height(58.dp),
+                        shape = RoundedCornerShape(26.dp),
+                    ) {
+                        Icon(Icons.Rounded.TableChart, contentDescription = null)
+                        Spacer(Modifier.width(8.dp))
+                        Text(stringResource(R.string.playlist_export_csv_short), maxLines = 1)
+                    }
+                    if (inLibrary) FilledTonalButton(
+                        onClick = { deleting = true },
+                        modifier = Modifier.weight(1f).height(58.dp),
+                        shape = RoundedCornerShape(26.dp),
+                        colors = ButtonDefaults.filledTonalButtonColors(
+                            containerColor = MaterialTheme.colorScheme.errorContainer,
+                            contentColor = MaterialTheme.colorScheme.onErrorContainer,
+                        ),
+                    ) {
+                        Icon(Icons.Rounded.Delete, contentDescription = null)
+                        Spacer(Modifier.width(8.dp))
+                        Text(stringResource(R.string.action_delete), maxLines = 1)
+                    }
+                }
+                if (deleting) DeletePlaylistDialog(playerViewModel.model, item, onDismiss = { deleting = false; onDismiss() })
+            }
             Spacer(Modifier.height(12.dp))
         }
     }

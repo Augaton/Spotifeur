@@ -1,10 +1,10 @@
 <div align="center">
   <!-- Logo: to be added (docs/assets/img/icon.png). -->
   <h1>Spotifeur</h1>
-  <p><strong>An independent Spotify client for Android, for music only.</strong></p>
+  <p><strong>A music player for Android for Spotify, YouTube Music and local files.</strong></p>
   <p>
-    Spotifeur signs in to your Spotify account and plays your library with Spotify's own Android protocols and audio engine.
-    It has no podcasts, videos, Canvas loops or promoted content, a Material 3 Expressive interface, and more settings than the official app.
+    Spotifeur plays your Spotify library with Spotify's own Android protocols and audio engine, the YouTube Music catalog without a Google account, and the audio files on your phone.
+    A Spotify account is optional. It has no podcasts, videos, Canvas loops or promoted content, a Material 3 Expressive interface, and more settings than the official app.
   </p>
 </div>
 
@@ -59,43 +59,49 @@
 | Offline downloads and audio cache | Yes | Yes, with an adjustable cache size and prefetch depth |
 | Podcasts, audiobooks, videos | Yes | No |
 | Canvas loops, promoted content, ads banners | Yes | No |
+| YouTube Music and local files, in the same playlists | No | Yes |
+| Use without a Spotify account | No | Yes, with YouTube Music and local files |
 | Themes, player styles, navigation bar, equalizer, gestures | Few options | Many options |
 
 Spotifeur uses the same services as the official Android app, so what you save, follow or edit in one shows up in the other.
 
 ## Features
 
-- **Home and library.** Pinned items first, then your playlists, albums, artists and saved tracks. Pins are stored on the device only.
+- **Home and library.** Pinned items, recently played tracks, downloads, liked songs, playlists, albums, artists and local files. Each home shelf can be shown or hidden, moved, and laid out as a row, a large row, a grid, a list or pills, with the number of items you choose. The buttons of album and playlist pages can be arranged as well, the others staying in a ⋮ menu. Pins are stored on the device only.
 - **Player.** Full-screen player with seek bar, queue, shuffle, repeat, sleep timer, and the codec and bitrate of the current track if you want them.
 - **Lyrics.** Synced lyrics from Spotify, with an immersive mode. When Spotify has none, Spotifeur can look them up on LRCLIB.
 - **Queue.** Reorder by dragging, swipe to remove, optional history of played tracks.
-- **Playlists.** Create a playlist on your Spotify account or on the device, rename it, set a cover from your photos, publish it on your profile, add tracks from anywhere, and add Spotify's recommendations.
+- **Playlists.** Create a playlist on your Spotify account, rename it, set a cover from your photos, publish it on your profile, and add Spotify's recommendations. Multi-service playlists are stored on the device, take a cover from your photos and can mix Spotify, YouTube Music and local tracks, with a badge showing each track's source. Local files can be added to Spotify playlists as Spotify's own local file references, and Spotify playlists that refer to local files play them from the phone's storage. Long-press a playlist to delete it.
+- **Import and export.** Export a playlist as CSV, and import a CSV exported by Spotifeur or a YouTube, YouTube Music or Spotify playlist link.
+- **YouTube Music.** Search and play the YouTube Music catalog without a Google account, with the same downloads, cache, queue and playlists as Spotify tracks. Without a Spotify account, Spotify tracks play from their closest YouTube Music match (title, artist, album and duration).
 - **Albums and artists.** Album pages, artist pages with top tracks, albums and related artists, and radios based on a track, an album, an artist or a playlist.
-- **Search.** Tracks, albums, artists and playlists, with paging.
-- **Offline.** Download albums, playlists or tracks. Recently played and upcoming tracks are kept in an encrypted cache (512 MB to 32 GB, up to 20 tracks ahead). An offline mode cuts all network access from the app.
+- **Search.** Tracks, albums, artists and playlists on Spotify, tracks on YouTube Music, with paging.
+- **Offline.** Download albums, playlists or tracks. Recently played and upcoming tracks are kept in a cache, encrypted for Spotify (512 MB to 32 GB, up to 20 tracks ahead). An offline mode cuts all network access from the app.
 - **Background playback.** Media notification, lock screen and Bluetooth controls, resume when headphones reconnect.
 - **Equalizer.** Presets, custom presets, bass boost, virtualizer and loudness.
-- **Appearance.** Light, dark or system theme, dynamic colors from the album art with several palette styles, floating or full-width navigation bar, home collage patterns, carousel style, blur on or off, smooth corners, English or French.
+- **Appearance.** Light, dark or system theme, dynamic colors from the album art with several palette styles, floating or full-width navigation bar, home collage patterns, carousel style, blur on or off, smooth corners, compact lists, English or French.
 - **Cast.** Google Cast for local files.
-- **Backup.** Export and import your settings, pins and local playlists.
+- **Backup.** Export and import your settings, pins and multi-service playlists.
 
 ## Why
 
-I was tired of paying for a service whose app is slow and keeps pushing podcasts, videos and other content I never asked for. I wanted the same music library in an app that only does music and that I can set up the way I like. Spotifeur still needs a Spotify account: it is a different app for the same service, not a way around it.
+I was tired of paying for a service whose app is slow and keeps pushing podcasts, videos and other content I never asked for. I wanted the same music library in an app that only does music and that I can set up the way I like. It now also plays YouTube Music and the files on my phone, in the same playlists.
 
 ## How it works
 
-Spotifeur does not use the public Web API, App Remote, a WebView or the installed Spotify app. It talks to Spotify the way the official Android app does:
+For Spotify, Spotifeur does not use the public Web API, App Remote, a WebView or the installed Spotify app. It talks to Spotify the way the official Android app does:
 
 - **Sign-in** with Login5 and ClientToken, using a code sent to your email address (or a password). The session is encrypted with Android Keystore.
 - **Library and catalog** through Playlist4, Collection v2, Extended Metadata and the search service.
 - **Audio** through HLS manifests processed by Spotify's own native engine, loaded unchanged from the official APK you supply at build time.
 
+YouTube Music goes through the anonymous InnerTube requests of music.youtube.com for search and playlists, and through the player endpoint for audio streams, read in byte ranges. This part is adapted from [Resona](https://github.com/code-saksham-hash/Resona). Without a Spotify account, a Spotify playlist link is read from Spotify's public embed page, which lists its first 100 tracks.
+
 Everything learned along the way is documented in [`protocol/`](protocol/), as a reference you can read without the code.
 
 ## Is it safe?
 
-- There is no Spotifeur server, no analytics and no tracking. The app talks to Spotify, and to [LRCLIB](https://lrclib.net) for lyrics Spotify does not have (title, artist, album and duration only; you can turn it off).
+- There is no Spotifeur server, no analytics and no tracking. The app talks to Spotify, to YouTube Music, and to [LRCLIB](https://lrclib.net) for lyrics Spotify does not have (title, artist, album and duration only; you can turn it off).
 - Your password is never stored. The email-code sign-in does not use one at all.
 - The session credential stays on your device, encrypted with Android Keystore.
 - Each release lists the SHA-256 of the APK and of its signing certificate. You can also build the APK yourself from this source and your own copy of the official Spotify APK.
@@ -109,7 +115,7 @@ Everything learned along the way is documented in [`protocol/`](protocol/), as a
 
 ## Install
 
-Download `Spotifeur-vX.Y.Z.apk` from the [latest release](https://github.com/jean-voila/Spotifeur/releases/latest) and install it on an ARM64 phone with Android 8.0 or later. Check its SHA-256 against the release notes. Then open Spotifeur, enter your Spotify email address and type the code Spotify sends you.
+Download `Spotifeur-vX.Y.Z.apk` from the [latest release](https://github.com/jean-voila/Spotifeur/releases/latest) and install it on an ARM64 phone with Android 8.0 or later. Check its SHA-256 against the release notes. Then open Spotifeur, enter your Spotify email address and type the code Spotify sends you, or continue without an account.
 
 ## Build from source
 
@@ -147,6 +153,7 @@ To publish a release, `scripts/release.sh --apkm /path/to/spotify.apkm` builds, 
 ## Credits
 
 - [librespot](https://github.com/librespot-org/librespot) for its public work on Spotify's protocols.
+- [Resona](https://github.com/code-saksham-hash/Resona) for its YouTube Music catalog and stream access.
 - [AndroidX Media3](https://github.com/androidx/media), [Jetpack Compose](https://developer.android.com/compose), [OkHttp](https://square.github.io/okhttp/), [Coil](https://coil-kt.github.io/coil/) and [LRCLIB](https://lrclib.net).
 
 ## License

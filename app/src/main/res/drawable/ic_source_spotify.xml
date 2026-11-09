@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Spotify source mark: a disc with three arcs, drawn as holes so any tint applies. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp" android:height="24dp" android:viewportWidth="24" android:viewportHeight="24">
+    <path android:fillColor="#FF000000" android:fillType="evenOdd"
+        android:pathData="M12,2A10,10 0,1 1,11.99 2Z M5.2,9.3Q12,5.4 18.9,9.8L18.3,11.4Q12,7.7 5.7,10.9Z M6.3,12.6Q12,9.5 17.5,12.9L16.9,14.3Q12,11.4 6.8,14Z M7.3,15.6Q12,13.3 16.3,15.8L15.8,16.9Q12,14.8 7.7,16.7Z" />
+</vector>

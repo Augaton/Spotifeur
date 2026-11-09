@@ -10,6 +10,7 @@ import fr.spotifeur.SpotifeurModel
 import fr.spotifeur.data.BackupManager
 import fr.spotifeur.data.Music
 import fr.spotifeur.data.isLocalTrack
+import fr.spotifeur.data.source
 import fr.spotifeur.playback.AudioCache
 import fr.spotifeur.playback.CachedAudio
 import fr.spotifeur.playback.DownloadCenter
@@ -282,7 +283,7 @@ class PlayerViewModel(val model: SpotifeurModel, private val scope: CoroutineSco
         }
         scope.launch {
             model.player.state.map { it.track?.id to it.audioFormat }.distinctUntilChanged().collect { (id, format) ->
-                if (id != null && format.isNotBlank() && !id.startsWith("local:") && measuredQuality[id] != format) {
+                if (id != null && format.isNotBlank() && !fr.spotifeur.data.isLocalTrackId(id) && measuredQuality[id] != format) {
                     measuredQuality[id] = format
                     mutableQualityRevision.update { it + 1 }
                     uiPrefs.edit { putString(KEY_QUALITY, org.json.JSONObject(measuredQuality.toMap()).toString()) }
@@ -559,12 +560,15 @@ class PlayerViewModel(val model: SpotifeurModel, private val scope: CoroutineSco
         if (item.id in downloadJobs) return
         val job = scope.launch(start = kotlinx.coroutines.CoroutineStart.LAZY) {
             try {
-                val spotify = model.tracksOf(item).filterNot(Music::isLocalTrack)
-                if (spotify.isEmpty()) { sendToast(context.getString(R.string.no_tracks_for, item.title)); return@launch }
-                val allowed = model.offlineAllowed()
+                val all = model.tracksOf(item).filterNot(Music::isLocalTrack)
+                if (all.isEmpty()) { sendToast(context.getString(R.string.no_tracks_for, item.title)); return@launch }
+                // Spotify keeps its own files only for accounts allowed to; YouTube Music files are always kept.
+                val throughSpotify = fr.spotifeur.data.SpotifyAccount.signedIn && all.any { it.id.startsWith("spotify:track:") }
+                val allowed = !throughSpotify || model.offlineAllowed()
                 kotlinx.coroutines.currentCoroutineContext().ensureActive()
-                if (!allowed) { sendToast(context.getString(R.string.download_not_allowed)); return@launch }
-                DownloadCenter.enqueue(context, item, spotify) {
+                val tracks = if (allowed) all else all.filter { it.source == fr.spotifeur.data.MusicSource.YouTubeMusic }
+                if (tracks.isEmpty()) { sendToast(context.getString(R.string.download_not_allowed)); return@launch }
+                DownloadCenter.enqueue(context, item, tracks) {
                     sendToast(context.getString(R.string.download_failed, item.title))
                 }
                 sendToast(context.getString(R.string.download_started))

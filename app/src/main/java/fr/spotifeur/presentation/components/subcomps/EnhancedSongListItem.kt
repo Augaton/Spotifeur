@@ -101,10 +101,15 @@ fun EnhancedSongListItem(
     selectionIndex: Int? = null,
     isSelectionMode: Boolean = false,
     showMoreOptionsButton: Boolean = true,
+    /** Shows where the track comes from, when the source badges setting is on. */
+    showSourceBadge: Boolean = false,
     onLongPress: () -> Unit = {},
     onMoreOptionsClick: (Song) -> Unit,
     onClick: () -> Unit
 ) {
+    val compact = fr.spotifeur.presentation.components.LocalCompactLists.current
+    val albumArtSize = if (compact && albumArtSize == 50.dp) 38.dp else albumArtSize
+    val rowPadding = if (compact) 6.dp else 12.dp
     val albumArtTargetSizePx = with(LocalDensity.current) { albumArtSize.roundToPx() }
     val isHighlighted = isCurrentSong && !isLoading
     val transition = updateTransition(
@@ -141,7 +146,7 @@ fun EnhancedSongListItem(
         if (state.isSelected) 1f else 0f
     }
 
-    val animatedCornerRadius = lerpDp(22.dp, 50.dp, highlightProgress)
+    val animatedCornerRadius = lerpDp(if (compact) 16.dp else 22.dp, 50.dp, highlightProgress)
     val animatedAlbumCornerRadius = lerpDp(10.dp, 50.dp, highlightProgress)
     val selectionScale = lerpFloat(1f, 0.98f, selectionScaleProgress)
     val selectionBorderWidth = lerpDp(0.dp, 2.5.dp, selectionVisualProgress)
@@ -194,7 +199,7 @@ fun EnhancedSongListItem(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 13.dp, vertical = 12.dp),
+                    .padding(horizontal = 13.dp, vertical = rowPadding),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 if(showAlbumArt) {
@@ -280,7 +285,7 @@ fun EnhancedSongListItem(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 13.dp, vertical = 12.dp),
+                    .padding(horizontal = 13.dp, vertical = rowPadding),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 if (showAlbumArt) {
@@ -326,7 +331,7 @@ fun EnhancedSongListItem(
                             }
                         }
                     }
-                    Spacer(modifier = Modifier.width(14.dp))
+                    Spacer(modifier = Modifier.width(if (compact) 12.dp else 14.dp))
                 } else {
                     Spacer(modifier = Modifier.width(4.dp))
                 }
@@ -345,19 +350,22 @@ fun EnhancedSongListItem(
                     } else {
                         Text(
                             text = song.title,
-                            style = MaterialTheme.typography.bodyLarge,
+                            style = if (compact) MaterialTheme.typography.bodyMedium else MaterialTheme.typography.bodyLarge,
                             fontWeight = FontWeight.SemiBold,
                             maxLines = 1,
                             color = contentColor,
                             overflow = TextOverflow.Ellipsis
                         )
                     }
-                    Spacer(modifier = Modifier.height(4.dp))
+                    Spacer(modifier = Modifier.height(if (compact) 1.dp else 4.dp))
                     Row(verticalAlignment = Alignment.CenterVertically) {
+                        if (showSourceBadge && fr.spotifeur.presentation.components.LocalSourceBadges.current) {
+                            fr.spotifeur.presentation.components.SourceBadge(song.source, Modifier.padding(end = 6.dp), contentColor.copy(alpha = 0.7f))
+                        }
                         TrackDownloadIndicator(song.id, song.title)
                         Text(
                             text = LocalTrackQuality.current(song)?.let { "${song.displayArtist} · $it" } ?: song.displayArtist,
-                            style = MaterialTheme.typography.bodyMedium,
+                            style = if (compact) MaterialTheme.typography.bodySmall else MaterialTheme.typography.bodyMedium,
                             color = contentColor.copy(alpha = 0.7f),
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis

@@ -145,7 +145,7 @@
     <string name="equalizer_volume">Volume</string>
     <string name="library_action_new">New</string>
     <string name="library_cd_create_new_playlist">Create new playlist</string>
-    <string name="library_cd_import_m3u_playlist">Import M3U playlist</string>
+    <string name="library_cd_import_m3u_playlist">Import a playlist</string>
     <string name="library_cd_locate_current_song">Locate current song</string>
     <string name="library_cd_open_settings">Settings</string>
     <string name="library_cd_sort_options">Sort options</string>

@@ -46,6 +46,7 @@ internal class QueuePreloader(
     private val cacheSources: CacheDataSource.Factory,
     private val scope: CoroutineScope,
     private val audio: NativeAudioProvider?,
+    private val youtubeSources: CacheDataSource.Factory? = null,
 ) : Player.Listener, AutoCloseable {
     private val app = context.applicationContext
     private val index = AudioIndex.get(app)
@@ -70,7 +71,7 @@ internal class QueuePreloader(
         // Resume incomplete listens after a process restart too.
         scope.launch {
             val interrupted = withContext(Dispatchers.IO) {
-                index.all().filter { it.lastPlayedMs > 0 && !AudioCache.isAvailableOffline(app, it.track.id) }
+                index.all().filter { it.lastPlayedMs > 0 && it.track.id.startsWith("spotify:track:") && it.file?.isYouTube != true && !AudioCache.isAvailableOffline(app, it.track.id) }
                     .sortedByDescending { it.lastPlayedMs }.map { it.track }
             }
             interrupted.forEach { heard.putIfAbsent(it.id, it) }
@@ -108,9 +109,9 @@ internal class QueuePreloader(
                 withContext(Dispatchers.IO) {
                     val kept = DownloadCenter.downloads.value.values.filter { it.isComplete }
                         .filter { it.track.id in ids }
-                        .mapNotNull { index.record(it.track.id)?.file }
+                        .mapNotNull { index.record(it.track.id)?.file }.filterNot { it.isYouTube }
                     val recent = AudioCache.entries(app).filter { it.isComplete && it.track.id in ids }
-                        .mapNotNull { index.record(it.track.id)?.file }
+                        .mapNotNull { index.record(it.track.id)?.file }.filterNot { it.isYouTube }
                     val keys = NativeKeyStore(app, session.username())
                     (kept + recent).map { it.hex }.distinct().filter { keys.load(it) == null }
                 }
@@ -139,7 +140,8 @@ internal class QueuePreloader(
         if (describedId == item.mediaId || !player.isPlaying) return
         describedId = item.mediaId
         val track = musicOf(item).takeUnless(Music::isLocalTrack) ?: return
-        heard[track.id] = track
+        // Only tracks read through Spotify are completed from Spotify.
+        if (item.localConfiguration?.uri?.scheme == "spotify") heard[track.id] = track
         scope.launch(Dispatchers.IO) { index.describe(track, played = true) }
     }
 
@@ -153,11 +155,13 @@ internal class QueuePreloader(
                 val observed = revision
                 val s = settings.settings.value
                 val current = player.currentMediaItemIndex
-                val queue = if (current in 0 until player.mediaItemCount) {
-                    preloadRange(current, player.mediaItemCount, s.preloadTracks).map { musicOf(player.getMediaItemAt(it)) }
+                val items = if (current in 0 until player.mediaItemCount) {
+                    preloadRange(current, player.mediaItemCount, s.preloadTracks).map { player.getMediaItemAt(it) }
                 } else emptyList()
+                val queue = items.filter { it.localConfiguration?.uri?.scheme == "spotify" }.map(::musicOf)
                 val targets = (queue.take(1) + queue.drop(1) + heard.values.toList().asReversed().take(10))
                     .filterNot(Music::isLocalTrack).distinctBy(Music::id)
+                fillYouTube(items.drop(1).filter { YouTubeUris.isYouTube(it.localConfiguration?.uri) }.take(MAX_YOUTUBE_AHEAD), s)
                 // Keep the prioritized prefix within the cache budget. A huge queue must not
                 // evict its first files just to fetch its tail, then download them all again.
                 var plannedBytes = 0L
@@ -191,6 +195,23 @@ internal class QueuePreloader(
         }
     }
 
+    /** The next YouTube Music tracks of the queue, read ahead into the recent cache. */
+    private suspend fun fillYouTube(items: List<MediaItem>, s: fr.spotifeur.data.preferences.AppSettings) {
+        val sources = youtubeSources ?: return
+        for (item in items) {
+            if (!NetworkMonitor.online.value || (!s.preloadOnMobile && connectivity.isActiveNetworkMetered)) return
+            val uri = item.localConfiguration?.uri ?: continue
+            val available = withContext(Dispatchers.IO) { AudioCache.isAvailableOffline(app, item.mediaId) }
+            if (available) continue
+            val spec = DataSpec.Builder().setUri(uri).setKey(YouTubeUris.cacheKey(item.mediaId)).build()
+            val writer = CacheWriter(sources.createDataSourceForDownloading(), spec, null, null)
+            try { withContext(Dispatchers.IO) { runInterruptible { writer.cache() } } }
+            catch (cancelled: CancellationException) { throw cancelled }
+            catch (_: IOException) { /* Played from the network when its turn comes. */ }
+            finally { writer.cancel() }
+        }
+    }
+
     private suspend fun fill(resolved: SpotifyHlsDataSource.Factory.ResolvedAudio) {
         val file = resolved.file
         if (audio != null) OfflinePreparation.retain(app, file.hex)
@@ -218,6 +239,8 @@ internal class QueuePreloader(
         const val WARM_START_DELAY_MS = 2_000L
         const val WARM_GAP_MS = 400L
         const val BYTES_PER_MB = 1024L * 1024
+        /** Read-ahead stays short: anonymous YouTube traffic is rate-limited. */
+        const val MAX_YOUTUBE_AHEAD = 2
     }
 }
 
@@ -264,8 +287,10 @@ internal class PlaybackRecovery(
         retry = scope.launch {
             for ((position, item) in targets) {
                 if (player.currentMediaItemIndex != current || NetworkMonitor.online.value) return@launch
-                val local = item.localConfiguration?.uri?.scheme != "spotify"
-                if (!local) {
+                val scheme = item.localConfiguration?.uri?.scheme
+                if (scheme == YouTubeUris.SCHEME) {
+                    if (!withContext(Dispatchers.IO) { AudioCache.isAvailableOffline(app, item.mediaId) }) continue
+                } else if (scheme == "spotify") {
                     val file = withContext(Dispatchers.IO) {
                         AudioIndex.get(app).record(item.mediaId)?.file?.takeIf { AudioCache.isAvailableOffline(app, item.mediaId) }
                     } ?: continue
@@ -303,6 +328,10 @@ internal class PlaybackRecovery(
 @UnstableApi
 internal class ResilientLoadPolicy : DefaultLoadErrorHandlingPolicy() {
     override fun getRetryDelayMsFor(loadErrorInfo: LoadErrorHandlingPolicy.LoadErrorInfo): Long {
+        // A track YouTube Music does not have, or refuses to every client, will not appear by retrying.
+        val youtube = generateSequence<Throwable>(loadErrorInfo.exception) { it.cause }.take(8)
+            .filterIsInstance<fr.spotifeur.data.youtube.YouTubeFailure>().firstOrNull()
+        if (youtube != null && youtube.status in PERMANENT_YOUTUBE_FAILURES) return C.TIME_UNSET
         val base = super.getRetryDelayMsFor(loadErrorInfo)
         return if (base == C.TIME_UNSET) base else minOf(base, MAX_RETRY_DELAY_MS)
     }
@@ -312,6 +341,7 @@ internal class ResilientLoadPolicy : DefaultLoadErrorHandlingPolicy() {
         const val MAX_RETRY_DELAY_MS = 2_000L
         const val ONLINE_RETRIES = 6
         const val OFFLINE_RETRIES = 1
+        val PERMANENT_YOUTUBE_FAILURES = setOf("NO_MATCH", "NO_AUDIO_FORMAT", "ALL_CLIENTS_EXCLUDED", "UNPLAYABLE", "ERROR", "LOGIN_REQUIRED")
     }
 }
 

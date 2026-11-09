@@ -11,6 +11,8 @@ class SpotifeurApplication : Application(), ImageLoaderFactory {
     override fun onCreate() {
         super.onCreate()
         NetworkMonitor.start(this)
+        fr.spotifeur.data.youtube.YouTubeMusic.init(this)
+        fr.spotifeur.data.youtube.TrackMatcher.init(this)
     }
 
     /** Covers stay on disk whatever the CDN's cache headers say: they never change for a given address. */

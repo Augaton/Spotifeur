@@ -80,13 +80,13 @@ import fr.spotifeur.utils.formatSongCount
 import fr.spotifeur.SpotifeurModel
 import fr.spotifeur.data.Music
 import fr.spotifeur.data.MusicKind
-import fr.spotifeur.data.model.toAlbum
 import fr.spotifeur.data.model.toSong
 import fr.spotifeur.data.preferences.CollagePattern
 import fr.spotifeur.presentation.components.AlbumArtCollage
 import androidx.compose.ui.res.stringResource
 import kotlinx.collections.immutable.toImmutableList
-import fr.spotifeur.presentation.components.AlbumGridItemRedesigned
+import fr.spotifeur.data.preferences.HomeShelf
+import fr.spotifeur.data.preferences.ShelfStyle
 import fr.spotifeur.presentation.components.HomeGradientTopBar
 import fr.spotifeur.presentation.components.MiniPlayerHeight
 import fr.spotifeur.presentation.components.MusicOptionsHost
@@ -100,7 +100,6 @@ import fr.spotifeur.presentation.navigation.openMusic
 import fr.spotifeur.presentation.viewmodel.PlayerViewModel
 import sh.calvin.reorderable.ReorderableColumn
 
-private const val RailLimit = 20
 private const val COLLAGE_ITEMS = 6
 private const val COLLAGE_MINIMUM = 3
 
@@ -121,6 +120,15 @@ fun HomeScreen(model: SpotifeurModel, navController: NavHostController, paddingV
     val playlistsTitle = stringResource(R.string.home_playlists)
     val albumsTitle = stringResource(R.string.home_albums)
     val artistsTitle = stringResource(R.string.home_artists)
+    val recent by model.recent.collectAsStateWithLifecycle()
+    val localFiles by model.localTracks.collectAsStateWithLifecycle()
+    val shelfTitles = mapOf(
+        HomeShelf.PINS to stringResource(R.string.home_pins),
+        HomeShelf.RECENT to stringResource(R.string.home_recent),
+        HomeShelf.MULTI_SERVICE to stringResource(R.string.home_multi_service),
+        HomeShelf.SPOTIFY_PLAYLISTS to stringResource(R.string.home_spotify_playlists),
+        HomeShelf.LOCAL_FILES to stringResource(R.string.home_local_files),
+    )
     val library by model.library.collectAsStateWithLifecycle()
     val hasSong by ui.stablePlayerStateHasSong()
     val navBarCompactMode by ui.navBarCompactMode.collectAsStateWithLifecycle()
@@ -132,11 +140,10 @@ fun HomeScreen(model: SpotifeurModel, navController: NavHostController, paddingV
         derivedStateOf { listState.firstVisibleItemIndex > 0 || listState.firstVisibleItemScrollOffset > scrollThresholdPx }
     }
     var reordering by rememberSaveable { mutableStateOf(false) }
-    val haptic = LocalHapticFeedback.current
     val open: (Music) -> Unit = { navController.openMusic(ui, it) }
     var optionsFor by remember { mutableStateOf<Music?>(null) }
     val showOptions: (Music) -> Unit = {
-        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+        // The long-click handler of the card already vibrates.
         optionsFor = it
     }
     val openLibrary: () -> Unit = { navController.navigateToTopLevelSafely(Screen.Library.route) }
@@ -165,17 +172,6 @@ fun HomeScreen(model: SpotifeurModel, navController: NavHostController, paddingV
                     ),
                     verticalArrangement = Arrangement.spacedBy(24.dp)
                 ) {
-                    if (pins.isNotEmpty()) {
-                        item(key = "pins_collage", contentType = "pins_collage") {
-                            PinsCollage(pins, settings.collagePattern, settings.collageAutoRotate, ui, { open(it) }, { showOptions(it) }, { reordering = true })
-                        }
-                    }
-
-                    librarySection("downloads", downloadsTitle,
-                        downloads.values.filter { it.isComplete }.map { it.collection.item }, ui,
-                        { item -> if (item.kind == MusicKind.Track) ui.playItem(item) else open(item) }, showOptions,
-                        { ui.requestedLibraryTab.value = fr.spotifeur.data.model.LibraryTabId.DOWNLOADS.storageKey; openLibrary() })
-
                     if (content == null && library.loading) {
                         item(key = "library_loading") {
                             Box(Modifier.fillMaxWidth().padding(32.dp), contentAlignment = Alignment.Center) {
@@ -200,9 +196,31 @@ fun HomeScreen(model: SpotifeurModel, navController: NavHostController, paddingV
                             }
                         }
                     }
-                    if (content != null) {
-                        if (content.savedTrackCount > 0) {
-                            item(key = "liked", contentType = "liked") {
+                    // Shelves in the order, layout and size chosen in Settings → Home.
+                    settings.homeLayout.filter { it.visible }.forEach { config ->
+                        val multi = localPlaylists.map { it.asMusic().copy(subtitle = localBadge + " · " + it.asMusic().subtitle) }
+                        val openTab: (fr.spotifeur.data.model.LibraryTabId) -> () -> Unit = { tab -> { ui.requestedLibraryTab.value = tab.storageKey; openLibrary() } }
+                        val title = when (config.shelf) {
+                            HomeShelf.DOWNLOADS -> downloadsTitle
+                            HomeShelf.PLAYLISTS -> playlistsTitle
+                            HomeShelf.ALBUMS -> albumsTitle
+                            HomeShelf.ARTISTS -> artistsTitle
+                            else -> shelfTitles[config.shelf].orEmpty()
+                        }
+                        val (items, openAll) = when (config.shelf) {
+                            HomeShelf.PINS -> pins to null
+                            HomeShelf.RECENT -> recent to null
+                            HomeShelf.DOWNLOADS -> downloads.values.filter { it.isComplete }.map { it.collection.item } to openTab(fr.spotifeur.data.model.LibraryTabId.DOWNLOADS)
+                            HomeShelf.LIKED -> emptyList<Music>() to null
+                            HomeShelf.PLAYLISTS -> (multi + content?.playlists.orEmpty()) to openTab(fr.spotifeur.data.model.LibraryTabId.PLAYLISTS)
+                            HomeShelf.MULTI_SERVICE -> multi to openTab(fr.spotifeur.data.model.LibraryTabId.PLAYLISTS)
+                            HomeShelf.SPOTIFY_PLAYLISTS -> content?.playlists.orEmpty() to openTab(fr.spotifeur.data.model.LibraryTabId.PLAYLISTS)
+                            HomeShelf.ALBUMS -> content?.albums.orEmpty() to openTab(fr.spotifeur.data.model.LibraryTabId.ALBUMS)
+                            HomeShelf.ARTISTS -> content?.artists.orEmpty() to openTab(fr.spotifeur.data.model.LibraryTabId.ARTISTS)
+                            HomeShelf.LOCAL_FILES -> localFiles to openTab(fr.spotifeur.data.model.LibraryTabId.LOCAL)
+                        }
+                        when {
+                            config.shelf == HomeShelf.LIKED -> if (content != null && content.savedTrackCount > 0) item(key = "liked", contentType = "liked") {
                                 LikedSongsCard(
                                     count = content.savedTrackCount,
                                     artworks = content.savedTracks.mapNotNull(Music::imageUrl).distinct().take(3),
@@ -213,10 +231,19 @@ fun HomeScreen(model: SpotifeurModel, navController: NavHostController, paddingV
                                     },
                                 )
                             }
+                            config.shelf == HomeShelf.PINS && config.style == ShelfStyle.COLLAGE -> if (pins.isNotEmpty()) {
+                                item(key = "pins_collage", contentType = "pins_collage") {
+                                    PinsCollage(pins.take(config.count), settings.collagePattern, settings.collageAutoRotate, ui, { open(it) }, { showOptions(it) }, { reordering = true })
+                                }
+                            }
+                            else -> homeShelf(config.shelf.key, title.takeIf { config.showTitle }, items.take(config.count), config.style, ui,
+                                onClick = { item ->
+                                    val tracks = items.filter { it.kind == MusicKind.Track }
+                                    if (item.kind == MusicKind.Track && tracks.size > 1) ui.playSongs(tracks.map { it.toSong() }, item.toSong(), title)
+                                    else if (item.kind == MusicKind.Track) ui.playItem(item) else open(item)
+                                },
+                                onLongPress = showOptions, openAll = openAll)
                         }
-                        librarySection("playlists", playlistsTitle, localPlaylists.map { it.asMusic().copy(subtitle = localBadge + " · " + it.asMusic().subtitle) } + content.playlists, ui, open, showOptions, openLibrary)
-                        librarySection("albums", albumsTitle, content.albums, ui, open, showOptions, openLibrary)
-                        librarySection("artists", artistsTitle, content.artists, ui, open, showOptions, openLibrary)
                     }
                 }
             }
@@ -248,41 +275,29 @@ private fun PlayerViewModel.stablePlayerStateHasSong() = remember(this) {
     derivedHasSong
 }.collectAsStateWithLifecycle()
 
-private fun androidx.compose.foundation.lazy.LazyListScope.librarySection(
+private fun androidx.compose.foundation.lazy.LazyListScope.homeShelf(
     key: String,
-    title: String,
+    title: String?,
     items: List<Music>,
+    style: ShelfStyle,
     ui: PlayerViewModel,
-    open: (Music) -> Unit,
+    onClick: (Music) -> Unit,
     onLongPress: (Music) -> Unit,
-    openLibrary: () -> Unit,
+    openAll: (() -> Unit)?,
 ) {
     if (items.isEmpty()) return
-    item(key = key, contentType = "library_section") {
+    item(key = key, contentType = "shelf_${style.key}") {
         Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            SectionHeader(title, openLibrary)
-            LazyRow(
-                contentPadding = PaddingValues(horizontal = 14.dp),
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-            ) {
-                items(items.take(RailLimit), key = Music::id, contentType = { it.kind }) { item ->
-                    if (item.kind == MusicKind.Artist) ArtistRailItem(item, { open(item) }, { onLongPress(item) })
-                    else Box(Modifier.width(164.dp)) {
-                        AlbumGridItemRedesigned(
-                            album = item.toAlbum(),
-                            albumColorSchemePairFlow = ui.getAlbumColorSchemeFlow(item.imageUrl.orEmpty()),
-                            onClick = { open(item) },
-                            onLongPress = { onLongPress(item) },
-                        )
-                    }
-                }
+            if (title != null) SectionHeader(title, openAll)
+            ShelfItems(items, style, ui, onClick, onLongPress) { item, modifier ->
+                PinnedPill(item, ui, modifier, { onClick(item) }, { onLongPress(item) })
             }
         }
     }
 }
 
 @Composable
-private fun SectionHeader(title: String, onOpen: () -> Unit) {
+private fun SectionHeader(title: String, onOpen: (() -> Unit)?) {
     Row(
         modifier = Modifier.fillMaxWidth().padding(horizontal = 14.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
@@ -294,7 +309,7 @@ private fun SectionHeader(title: String, onOpen: () -> Unit) {
             style = MaterialTheme.typography.titleLarge,
             fontWeight = FontWeight.SemiBold
         )
-        FilledIconButton(
+        if (onOpen != null) FilledIconButton(
             modifier = Modifier.height(40.dp).width(64.dp),
             colors = IconButtonDefaults.filledIconButtonColors(
                 containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
@@ -434,30 +449,6 @@ private fun PinnedPill(
                 )
             }
         }
-    }
-}
-
-@OptIn(ExperimentalFoundationApi::class)
-@Composable
-private fun ArtistRailItem(item: Music, onClick: () -> Unit, onLongClick: () -> Unit) {
-    Column(
-        Modifier.width(124.dp).clip(RoundedCornerShape(20.dp)).combinedClickable(onClick = onClick, onLongClick = onLongClick),
-        horizontalAlignment = Alignment.CenterHorizontally,
-    ) {
-        SmartImage(
-            model = item.imageUrl,
-            contentDescription = item.title,
-            shape = CircleShape,
-            contentScale = ContentScale.Crop,
-            modifier = Modifier.size(116.dp),
-        )
-        Text(
-            item.title,
-            modifier = Modifier.padding(top = 8.dp, bottom = 4.dp),
-            style = MaterialTheme.typography.titleSmall,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-        )
     }
 }
 

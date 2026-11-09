@@ -3,9 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Spotifeur: an open-source Spotify client for Android, music only</title>
-    <meta name="description" content="Spotifeur is a free, open-source Spotify client for Android. Your Spotify library with Spotify's own protocols and audio engine, without podcasts, videos or Canvas, and with more settings.">
-    <meta name="keywords" content="Spotify client, Android, open source, Spotify without podcasts, Spotify alternative app, Material 3 Expressive, music player, Spotify offline, Jetpack Compose">
+    <title>Spotifeur: an open-source music player for Android for Spotify, YouTube Music and local files</title>
+    <meta name="description" content="Spotifeur is a free, open-source music player for Android. Your Spotify library with Spotify's own protocols and audio engine, the YouTube Music catalog and your local files, in the same playlists. A Spotify account is optional.">
+    <meta name="keywords" content="Spotify client, YouTube Music, local music player, Android, open source, Spotify without podcasts, Spotify alternative app, Material 3 Expressive, music player, Spotify offline, Jetpack Compose">
     <meta name="robots" content="index, follow, max-image-preview:large">
     <meta name="theme-color" content="#0A100D">
     <link rel="canonical" href="https://jean-voila.github.io/Spotifeur/">
@@ -13,14 +13,14 @@
     <meta property="og:type" content="website">
     <meta property="og:site_name" content="Spotifeur">
     <meta property="og:url" content="https://jean-voila.github.io/Spotifeur/">
-    <meta property="og:title" content="Spotifeur: an open-source Spotify client for Android">
-    <meta property="og:description" content="Your Spotify library in an Android app for music only: no podcasts, videos or Canvas. Free and open source.">
+    <meta property="og:title" content="Spotifeur: a music player for Android for Spotify, YouTube Music and local files">
+    <meta property="og:description" content="Spotify, YouTube Music and local files in one Android app for music only: no podcasts, videos or Canvas. Free and open source.">
     <meta property="og:image" content="https://jean-voila.github.io/Spotifeur/assets/img/screens/player.jpg">
     <meta property="og:locale" content="en_US">
 
     <meta name="twitter:card" content="summary_large_image">
-    <meta name="twitter:title" content="Spotifeur: an open-source Spotify client for Android">
-    <meta name="twitter:description" content="Your Spotify library in an Android app for music only: no podcasts, videos or Canvas. Free and open source.">
+    <meta name="twitter:title" content="Spotifeur: a music player for Android for Spotify, YouTube Music and local files">
+    <meta name="twitter:description" content="Spotify, YouTube Music and local files in one Android app for music only: no podcasts, videos or Canvas. Free and open source.">
     <meta name="twitter:image" content="https://jean-voila.github.io/Spotifeur/assets/img/screens/player.jpg">
 
     <script type="application/ld+json">
@@ -30,7 +30,7 @@
         "name": "Spotifeur",
         "operatingSystem": "Android 8.0 or later (ARM64)",
         "applicationCategory": "MultimediaApplication",
-        "description": "Free, open-source Spotify client for Android. It plays your Spotify library with Spotify's own Android protocols and audio engine, without podcasts, videos or Canvas.",
+        "description": "Free, open-source music player for Android. It plays your Spotify library with Spotify's own Android protocols and audio engine, the YouTube Music catalog and local files, without podcasts, videos or Canvas.",
         "license": "https://www.gnu.org/licenses/gpl-3.0.html",
         "isAccessibleForFree": true,
         "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
@@ -43,7 +43,7 @@
         "@context": "https://schema.org",
         "@type": "FAQPage",
         "mainEntity": [
-            { "@type": "Question", "name": "Do I need a Spotify account?", "acceptedAnswer": { "@type": "Answer", "text": "Yes. Spotifeur plays your Spotify library. It was tested with Premium." } },
+            { "@type": "Question", "name": "Do I need a Spotify account?", "acceptedAnswer": { "@type": "Answer", "text": "No. Without one, Spotifeur plays YouTube Music and local files. With one, it plays your Spotify library; it was tested with Premium." } },
             { "@type": "Question", "name": "Do I need the Spotify app installed?", "acceptedAnswer": { "@type": "Answer", "text": "No. Spotify's audio engine is packaged inside Spotifeur." } },
             { "@type": "Question", "name": "Which phones are supported?", "acceptedAnswer": { "@type": "Answer", "text": "ARM64 phones with Android 8.0 or later." } },
             { "@type": "Question", "name": "Is it synced with the official app?", "acceptedAnswer": { "@type": "Answer", "text": "Yes: saved tracks, albums, artists and playlists." } }
@@ -64,7 +64,7 @@
     <header class="hero">
         <!-- Logo: to be added. -->
         <h1>Spotifeur</h1>
-        <p class="lead">Open-source Spotify client for Android, for music only.</p>
+        <p class="lead">Open-source music player for Android for Spotify, YouTube Music and local files.</p>
         <div class="actions">
             <a class="button primary" href="https://github.com/jean-voila/Spotifeur/releases/latest"><span class="icon" aria-hidden="true">download</span>Download APK</a>
             <a class="button" href="https://github.com/jean-voila/Spotifeur"><span class="icon" aria-hidden="true">code</span>Source code</a>
@@ -114,11 +114,12 @@
         <section id="features">
             <h2>Features</h2>
             <div class="grid">
-                <article class="card"><span class="icon" aria-hidden="true">home</span><h3>Home</h3><p>Pins, playlists, albums</p></article>
+                <article class="card"><span class="icon" aria-hidden="true">home</span><h3>Home</h3><p>Shelves you arrange</p></article>
                 <article class="card"><span class="icon" aria-hidden="true">play_circle</span><h3>Player</h3><p>Queue, sleep timer, codec info</p></article>
                 <article class="card"><span class="icon" aria-hidden="true">lyrics</span><h3>Lyrics</h3><p>Synced, immersive mode</p></article>
                 <article class="card"><span class="icon" aria-hidden="true">queue_music</span><h3>Queue</h3><p>Drag, swipe, history</p></article>
-                <article class="card"><span class="icon" aria-hidden="true">playlist_add</span><h3>Playlists</h3><p>Create, cover, suggestions</p></article>
+                <article class="card"><span class="icon" aria-hidden="true">playlist_add</span><h3>Playlists</h3><p>Multi-service, CSV, import</p></article>
+                <article class="card"><span class="icon" aria-hidden="true">library_music</span><h3>YouTube Music</h3><p>No Google account needed</p></article>
                 <article class="card"><span class="icon" aria-hidden="true">radio</span><h3>Radios</h3><p>From any track or album</p></article>
                 <article class="card"><span class="icon" aria-hidden="true">download_for_offline</span><h3>Offline</h3><p>Downloads, cache up to 32 GB</p></article>
                 <article class="card"><span class="icon" aria-hidden="true">equalizer</span><h3>Equalizer</h3><p>Presets, bass boost</p></article>
@@ -139,7 +140,7 @@
         <section id="faq">
             <h2>FAQ</h2>
             <div class="faq">
-                <details><summary>Do I need a Spotify account?</summary><p>Yes. Tested with Premium.</p></details>
+                <details><summary>Do I need a Spotify account?</summary><p>No. Without one: YouTube Music and local files.</p></details>
                 <details><summary>Do I need the Spotify app installed?</summary><p>No. The audio engine is inside Spotifeur.</p></details>
                 <details><summary>Which phones are supported?</summary><p>ARM64, Android 8.0 or later.</p></details>
                 <details><summary>Is it synced with the official app?</summary><p>Yes: saved tracks, albums, artists and playlists.</p></details>

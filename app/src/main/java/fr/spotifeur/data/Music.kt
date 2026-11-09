@@ -23,3 +23,14 @@ data class Music(
     val quality: String = "",
     val ownerUsername: String? = null,
 )
+
+/** Where a track's audio comes from. */
+enum class MusicSource { Local, Spotify, YouTubeMusic }
+
+val Music.source: MusicSource get() = musicSourceOf(id)
+
+fun musicSourceOf(id: String): MusicSource = when {
+    isLocalTrackId(id) -> MusicSource.Local
+    id.startsWith(fr.spotifeur.data.youtube.YTM_TRACK_PREFIX) -> MusicSource.YouTubeMusic
+    else -> MusicSource.Spotify
+}

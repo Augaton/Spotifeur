@@ -20,8 +20,13 @@ import java.util.UUID
 
 const val LOCAL_TRACK_PREFIX = "local:track:"
 const val LOCAL_PLAYLIST_PREFIX = "local:playlist:"
+/** A local file a Spotify playlist refers to: `spotify:local:artist:album:title:seconds`. */
+const val SPOTIFY_LOCAL_PREFIX = "spotify:local:"
 
-val Music.isLocalTrack: Boolean get() = id.startsWith(LOCAL_TRACK_PREFIX)
+/** A file on this device, or a Spotify playlist's reference to one. */
+val Music.isLocalTrack: Boolean get() = isLocalTrackId(id)
+fun isLocalTrackId(id: String): Boolean = id.startsWith(LOCAL_TRACK_PREFIX) || id.startsWith(SPOTIFY_LOCAL_PREFIX)
+/** A multi-service playlist: stored on this device, it holds tracks of every source. */
 val Music.isLocalPlaylist: Boolean get() = id.startsWith(LOCAL_PLAYLIST_PREFIX)
 
 /** "FLAC · 44.1 kHz · 1012 kbps", leaving out whatever is unknown. */
@@ -39,6 +44,34 @@ private fun audioFormatName(subtype: String): String = when (subtype.lowercase()
     "opus" -> "OPUS"
     "x-wav", "wav", "raw" -> "WAV"
     else -> subtype.uppercase()
+}
+
+/**
+ * The device file a reference points to (a Spotify playlist's local file, or a CSV line): same
+ * title, and the same artist or duration.
+ */
+internal fun matchLocalFile(reference: Music, files: List<Music>): Music? {
+    val normalize = fr.spotifeur.data.youtube.TrackMatcher::normalize
+    val title = normalize(reference.title)
+    if (title.isEmpty()) return null
+    val artist = normalize(reference.subtitle)
+    return files.filter { normalize(it.title) == title }.maxByOrNull { file ->
+        val sameArtist = artist.isNotEmpty() && normalize(file.subtitle).let { it == artist || it.contains(artist) || artist.contains(it) && it.isNotEmpty() }
+        val closeDuration = reference.durationMs > 0 && file.durationMs > 0 && kotlin.math.abs(reference.durationMs - file.durationMs) <= 3_000
+        (if (sameArtist) 2 else 0) + (if (closeDuration) 1 else 0) + (if (artist.isEmpty()) 1 else 0)
+    }?.takeIf { file ->
+        val sameArtist = artist.isEmpty() || normalize(file.subtitle).let { it.isNotEmpty() && (it == artist || it.contains(artist) || artist.contains(it)) }
+        val closeDuration = reference.durationMs > 0 && file.durationMs > 0 && kotlin.math.abs(reference.durationMs - file.durationMs) <= 3_000
+        sameArtist || closeDuration
+    }
+}
+
+/** A reference with the device file it points to, so it plays; unchanged when there is none. */
+internal fun withLocalFile(reference: Music, files: List<Music>): Music {
+    if (!reference.id.startsWith(SPOTIFY_LOCAL_PREFIX) || reference.mediaUri != null) return reference
+    val file = matchLocalFile(reference, files) ?: return reference
+    return reference.copy(mediaUri = file.mediaUri, imageUrl = reference.imageUrl ?: file.imageUrl,
+        durationMs = file.durationMs.takeIf { it > 0 } ?: reference.durationMs, quality = file.quality)
 }
 
 /** Reads the device's music from MediaStore. Nothing is copied. */
@@ -87,15 +120,16 @@ class LocalLibrary(context: Context) {
     }
 }
 
-data class LocalPlaylist(val id: String, val name: String, val tracks: List<Music>) {
+/** A multi-service playlist: stored on this device, it can hold Spotify, YouTube Music and local tracks. */
+data class LocalPlaylist(val id: String, val name: String, val tracks: List<Music>, val cover: String? = null) {
     fun asMusic(): Music = Music(
         id = id, title = name, kind = MusicKind.Playlist,
         subtitle = fr.spotifeur.utils.formatSongCount(tracks.size),
-        imageUrl = playlistMosaic(tracks) ?: tracks.firstNotNullOfOrNull(Music::imageUrl), tracks = tracks.map(Music::id),
+        imageUrl = cover ?: playlistMosaic(tracks) ?: tracks.firstNotNullOfOrNull(Music::imageUrl), tracks = tracks.map(Music::id),
     )
 }
 
-/** Playlists that exist only on this device. They can mix Spotify and local tracks. */
+/** Multi-service playlists. They exist only on this device and mix every source. */
 class LocalPlaylistStore(context: Context) {
     private val preferences = context.applicationContext.getSharedPreferences("local_playlists", Context.MODE_PRIVATE)
     private val mutable = MutableStateFlow(decodeLocalPlaylists(preferences.getString(KEY, null)))
@@ -108,6 +142,8 @@ class LocalPlaylistStore(context: Context) {
         return playlist
     }
     fun rename(id: String, name: String) = change(id) { it.copy(name = name.trim()) }
+    /** A picture chosen by the user, copied into the app's files; null goes back to the track covers. */
+    fun setCover(id: String, cover: String?) = change(id) { it.copy(cover = cover) }
     fun delete(id: String) = write(mutable.value.filterNot { it.id == id })
     fun add(id: String, tracks: List<Music>) = change(id) { it.copy(tracks = it.tracks + tracks) }
     fun removeAt(id: String, index: Int) = change(id) { playlist ->
@@ -130,7 +166,8 @@ class LocalPlaylistStore(context: Context) {
 
 internal fun encodeLocalPlaylists(items: List<LocalPlaylist>): String = JSONArray().apply {
     items.forEach { playlist ->
-        put(JSONObject().put("id", playlist.id).put("name", playlist.name).put("tracks", JSONArray(encodePins(playlist.tracks))))
+        put(JSONObject().put("id", playlist.id).put("name", playlist.name).put("tracks", JSONArray(encodePins(playlist.tracks)))
+            .apply { playlist.cover?.let { put("cover", it) } })
     }
 }.toString()
 
@@ -140,7 +177,8 @@ internal fun decodeLocalPlaylists(encoded: String?): List<LocalPlaylist> {
         val array = JSONArray(encoded)
         List(array.length()) { index ->
             val entry = array.getJSONObject(index)
-            LocalPlaylist(entry.getString("id"), entry.getString("name"), decodePins(entry.getJSONArray("tracks").toString()))
+            LocalPlaylist(entry.getString("id"), entry.getString("name"), decodePins(entry.getJSONArray("tracks").toString()),
+                entry.optString("cover").takeIf(String::isNotBlank))
         }.filter { it.id.startsWith(LOCAL_PLAYLIST_PREFIX) }
     } catch (_: org.json.JSONException) { emptyList() }
 }

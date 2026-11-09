@@ -128,7 +128,9 @@ internal class SpotifyCatalog(
             .build()
         val response = authenticatedSpotifyRequest(transport, session, url, "Spotify playlist")
         val decoded = decodePlaylistPage(response, item)
-        val tracks = hydrate(decoded.uris)
+        hydrate(decoded.uris)
+        // Keep the playlist's order, local file references included.
+        val tracks = decoded.entries.mapNotNull { entry -> spotifyLocalTrack(entry) ?: musicCache[entry] }
         val artwork = decoded.item.imageUrl ?: playlistMosaic(tracks)
         val playlist = decoded.item.copy(imageUrl = artwork)
         musicCache[item.id] = playlist
@@ -320,14 +322,19 @@ private fun rawSpotifyArtwork(value: String?): String? {
 
 internal data class PlaylistPage(
     val item: Music, val uris: List<String>, val total: Int, val rawCount: Int, val hasMore: Boolean,
+    /** Tracks and local file references, in playlist order. */
+    val entries: List<String> = uris,
 )
 
 internal fun decodePlaylistPage(bytes: ByteArray, fallback: Music): PlaylistPage {
     val list = Proto(bytes)
     val contents = list.message(5)
     val raw = contents?.messages(3).orEmpty()
-    val uris = raw.mapNotNull { it.text(1)?.let(::canonicalMusicUri) }
-        .filter { it.startsWith("spotify:track:") }
+    val entries = raw.mapNotNull { row ->
+        val uri = row.text(1) ?: return@mapNotNull null
+        if (uri.startsWith(SPOTIFY_LOCAL_PREFIX)) uri else canonicalMusicUri(uri)?.takeIf { it.startsWith("spotify:track:") }
+    }
+    val uris = entries.filter { it.startsWith("spotify:track:") }
     val attrs = list.message(3)
     val image = playlistImage(attrs) ?: fallback.imageUrl
     val total = list.number(2) ?: raw.size
@@ -337,7 +344,7 @@ internal fun decodePlaylistPage(bytes: ByteArray, fallback: Music): PlaylistPage
             subtitle = fr.spotifeur.utils.formatSongCount(total),
             imageUrl = image, note = attrs?.text(2).orEmpty(), ownerUsername = list.text(16) ?: fallback.ownerUsername,
         ),
-        uris = uris, total = total, rawCount = raw.size,
+        uris = uris, total = total, rawCount = raw.size, entries = entries,
         hasMore = contents?.number(2) == 1 || (contents?.number(1) ?: 0) + raw.size < total,
     )
 }
@@ -349,4 +356,20 @@ internal fun playlistImage(attrs: Proto?): String? {
     val picture = attrs.bytes(3) ?: return null
     return if (picture.size == 20) "https://i.scdn.co/image/${picture.metadataHex()}"
     else spotifyArtwork(picture.decodeToString())
+}
+
+/**
+ * A local file reference of a Spotify playlist: `spotify:local:{artist}:{album}:{title}:{seconds}`,
+ * each part URL-encoded. The audio is looked up among the device's files.
+ */
+internal fun spotifyLocalTrack(uri: String): Music? {
+    if (!uri.startsWith(SPOTIFY_LOCAL_PREFIX)) return null
+    val parts = uri.removePrefix(SPOTIFY_LOCAL_PREFIX).split(':')
+    if (parts.size < 4) return null
+    fun decode(value: String) = runCatching { java.net.URLDecoder.decode(value, "UTF-8") }.getOrDefault(value)
+    val title = decode(parts[2]).ifBlank { return null }
+    return Music(
+        id = uri, title = title, subtitle = decode(parts[0]), kind = MusicKind.Track,
+        album = decode(parts[1]), durationMs = (parts[3].toIntOrNull() ?: 0) * 1000,
+    )
 }

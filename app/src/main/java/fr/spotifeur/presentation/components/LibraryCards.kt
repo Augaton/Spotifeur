@@ -418,6 +418,7 @@ fun AlbumGridItemRedesigned(
 @androidx.annotation.OptIn(UnstableApi::class)
 @Composable
 fun ArtistListItem(artist: Artist, onClick: () -> Unit, isLoading: Boolean = false, onLongPress: () -> Unit = {}) {
+    val compact = LocalCompactLists.current
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -427,12 +428,12 @@ fun ArtistListItem(artist: Artist, onClick: () -> Unit, isLoading: Boolean = fal
             containerColor = MaterialTheme.colorScheme.surfaceContainerLow
         )
     ) {
-        Row(modifier = Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
+        Row(modifier = Modifier.padding(if (compact) 7.dp else 12.dp), verticalAlignment = Alignment.CenterVertically) {
             if (isLoading) {
                 // Skeleton loading state
                 ShimmerBox(
                     modifier = Modifier
-                        .size(48.dp)
+                        .size(if (compact) 36.dp else 48.dp)
                         .clip(CircleShape)
                 )
                 Spacer(modifier = Modifier.width(16.dp))
@@ -454,7 +455,7 @@ fun ArtistListItem(artist: Artist, onClick: () -> Unit, isLoading: Boolean = fal
             } else {
                 Box(
                     modifier = Modifier
-                        .size(48.dp)
+                        .size(if (compact) 36.dp else 48.dp)
                         .clip(CircleShape)
                         .background(MaterialTheme.colorScheme.primaryContainer),
                     contentAlignment = Alignment.Center
@@ -530,7 +531,7 @@ fun AlbumListItem(
         Card(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(80.dp),
+                .height(if (LocalCompactLists.current) 58.dp else 80.dp),
             shape = cardShape,
             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f))
         ) {
@@ -566,7 +567,7 @@ fun AlbumListItem(
         Card(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(88.dp)
+                .height(if (LocalCompactLists.current) 62.dp else 88.dp)
                 .scale(selectionScale)
                 .then(
                     if (isSelected) {
@@ -747,6 +748,7 @@ fun PlaylistItem(
         label = "playlistBorderColorAnimation"
     )
 
+    val compact = LocalCompactLists.current
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -777,18 +779,18 @@ fun PlaylistItem(
         colors = CardDefaults.cardColors(containerColor = containerColor)
     ) {
         Row(
-            modifier = Modifier.padding(12.dp),
+            modifier = Modifier.padding(if (compact) 7.dp else 12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             SmartImage(
                 model = playlist.coverImageUri,
                 contentDescription = null,
-                shape = RoundedCornerShape(16.dp),
-                modifier = Modifier.size(64.dp),
+                shape = RoundedCornerShape(if (compact) 10.dp else 16.dp),
+                modifier = Modifier.size(if (compact) 42.dp else 64.dp),
                 contentScale = ContentScale.Crop
             )
 
-            Spacer(modifier = Modifier.width(16.dp))
+            Spacer(modifier = Modifier.width(if (compact) 12.dp else 16.dp))
 
             Column(modifier = Modifier.weight(1f)) {
                 Row(
@@ -797,7 +799,7 @@ fun PlaylistItem(
                 ) {
                     Text(
                         text = playlist.name,
-                        style = MaterialTheme.typography.titleMedium.copy(fontFamily = GoogleSansRounded),
+                        style = (if (compact) MaterialTheme.typography.titleSmall else MaterialTheme.typography.titleMedium).copy(fontFamily = GoogleSansRounded),
                         fontWeight = FontWeight.Bold,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,

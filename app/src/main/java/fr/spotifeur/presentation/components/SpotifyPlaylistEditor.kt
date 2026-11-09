@@ -42,7 +42,10 @@ internal fun SpotifyPlaylistEditor(
     val saveFailure = stringResource(R.string.spotify_playlist_failed)
     val scope = rememberCoroutineScope()
     var name by remember { mutableStateOf(playlist?.title.orEmpty()) }
-    var local by remember { mutableStateOf(false) }
+    val discovery by model.discovery.collectAsState()
+    // Without a Spotify account, every new playlist is a multi-service playlist.
+    val signedIn = discovery.spotifyEnabled
+    var local by remember { mutableStateOf(!signedIn) }
     var published by remember { mutableStateOf(false) }
     var knownVisibility by remember { mutableStateOf(playlist == null) }
     var image by remember { mutableStateOf<Uri?>(null) }
@@ -60,7 +63,7 @@ internal fun SpotifyPlaylistEditor(
         text = {
             Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 OutlinedTextField(name, { name = it.take(100) }, label = { Text(stringResource(R.string.playlist_name)) }, singleLine = true, enabled = !busy)
-                if (playlist == null) {
+                if (playlist == null && signedIn) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         RadioButton(!local, { if (!busy) local = false }, enabled = !busy)
                         Text(stringResource(R.string.spotify_playlist_account), Modifier.clickable(enabled = !busy) { local = false })
@@ -70,9 +73,9 @@ internal fun SpotifyPlaylistEditor(
                         Text(stringResource(R.string.spotify_playlist_device), Modifier.clickable(enabled = !busy) { local = true })
                     }
                 }
+                if (image != null || playlist?.imageUrl != null) AsyncImage(image ?: playlist?.imageUrl, null, Modifier.size(100.dp))
+                OutlinedButton(onClick = { picker.launch("image/*") }, enabled = !busy) { Text(stringResource(R.string.spotify_playlist_cover)) }
                 if (!local) {
-                    if (image != null || playlist?.imageUrl != null) AsyncImage(image ?: playlist?.imageUrl, null, Modifier.size(100.dp))
-                    OutlinedButton(onClick = { picker.launch("image/*") }, enabled = !busy) { Text(stringResource(R.string.spotify_playlist_cover)) }
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Text(stringResource(R.string.spotify_playlist_profile), Modifier.weight(1f))
                         Switch(published, { published = it }, enabled = !busy && knownVisibility)
@@ -88,12 +91,13 @@ internal fun SpotifyPlaylistEditor(
                 scope.launch {
                     try {
                         // Read and normalize the selected image before creating anything remotely.
-                        val jpeg = if (!local && image != null) withContext(Dispatchers.IO) { playlistJpeg(context, checkNotNull(image)) } else null
+                        val jpeg = if (image != null) withContext(Dispatchers.IO) { playlistJpeg(context, checkNotNull(image)) } else null
                         val tracks = initialItem?.let { model.tracksOf(it) }.orEmpty()
                         if (local) {
                             val created = model.localPlaylistStore.create(name.trim())
                             if (tracks.isNotEmpty()) model.localPlaylistStore.add(created.id, tracks)
-                            onSaved(created.asMusic()); onDismiss()
+                            if (jpeg != null) model.setLocalPlaylistCover(created.id, jpeg)
+                            onSaved(model.localPlaylistStore.get(created.id)?.asMusic() ?: created.asMusic()); onDismiss()
                         } else {
                             val created = if (playlist == null) model.createSpotifyPlaylist(name, tracks, published) else playlist.also {
                                 if (name.trim() != it.title) model.spotifyPlaylists.rename(it.id, name)
@@ -120,7 +124,7 @@ internal fun SpotifyPlaylistEditor(
     )
 }
 
-private fun playlistJpeg(context: android.content.Context, uri: Uri): ByteArray {
+internal fun playlistJpeg(context: android.content.Context, uri: Uri): ByteArray {
     val resolver = context.contentResolver
     val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
     resolver.openInputStream(uri).use { requireNotNull(it); BitmapFactory.decodeStream(it, null, bounds) }
@@ -152,4 +156,53 @@ private fun playlistJpeg(context: android.content.Context, uri: Uri): ByteArray 
         return try { ByteArrayOutputStream().also { square.compress(Bitmap.CompressFormat.JPEG, 90, it) }.toByteArray() }
         finally { if (square !== crop) square.recycle(); if (crop !== oriented) crop.recycle() }
     } finally { if (oriented !== bitmap) oriented.recycle(); bitmap.recycle() }
+}
+
+/** Name and cover of a multi-service playlist. */
+@Composable
+internal fun LocalPlaylistEditor(model: SpotifeurModel, playlist: Music, onDismiss: () -> Unit) {
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    val saveFailure = stringResource(R.string.spotify_playlist_failed)
+    val stored = model.localPlaylistStore.get(playlist.id)
+    var name by remember { mutableStateOf(playlist.title) }
+    var image by remember { mutableStateOf<Uri?>(null) }
+    var removeCover by remember { mutableStateOf(false) }
+    var busy by remember { mutableStateOf(false) }
+    var error by remember { mutableStateOf<String?>(null) }
+    val picker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri -> if (uri != null) { image = uri; removeCover = false } }
+    val shown: Any? = image ?: if (removeCover) null else stored?.cover
+    AlertDialog(
+        onDismissRequest = { if (!busy) onDismiss() },
+        title = { Text(stringResource(R.string.spotify_playlist_edit_local)) },
+        text = {
+            Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                OutlinedTextField(name, { name = it.take(100) }, label = { Text(stringResource(R.string.playlist_name)) }, singleLine = true, enabled = !busy)
+                if (shown != null) AsyncImage(shown, null, Modifier.size(100.dp))
+                OutlinedButton(onClick = { picker.launch("image/*") }, enabled = !busy) { Text(stringResource(R.string.spotify_playlist_cover)) }
+                if (shown != null) TextButton(onClick = { image = null; removeCover = true }, enabled = !busy) { Text(stringResource(R.string.playlist_cover_remove)) }
+                error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
+                if (busy) LinearProgressIndicator(Modifier.fillMaxWidth())
+            }
+        },
+        confirmButton = {
+            TextButton(enabled = !busy && name.isNotBlank(), onClick = {
+                busy = true
+                scope.launch {
+                    try {
+                        if (name.trim() != playlist.title) model.localPlaylistStore.rename(playlist.id, name)
+                        val picked = image
+                        when {
+                            picked != null -> model.setLocalPlaylistCover(playlist.id, withContext(Dispatchers.IO) { playlistJpeg(context, picked) })
+                            removeCover -> model.setLocalPlaylistCover(playlist.id, null)
+                        }
+                        onDismiss()
+                    } catch (cancelled: CancellationException) { throw cancelled }
+                    catch (failure: Exception) { error = failure.message ?: saveFailure }
+                    finally { busy = false }
+                }
+            }) { Text(stringResource(R.string.action_save)) }
+        },
+        dismissButton = { TextButton(onClick = onDismiss, enabled = !busy) { Text(stringResource(R.string.action_cancel)) } },
+    )
 }

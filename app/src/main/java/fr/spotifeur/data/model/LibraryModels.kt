@@ -30,7 +30,8 @@ data class Song(
     val mediaUri: String? = null,
     val quality: String = "",
 ) {
-    val isLocal: Boolean get() = id.startsWith("local:track:")
+    val isLocal: Boolean get() = fr.spotifeur.data.isLocalTrackId(id)
+    val source: fr.spotifeur.data.MusicSource get() = fr.spotifeur.data.musicSourceOf(id)
     val contentUriString: String get() = id
     val displayArtist: String
         get() = if (artists.isNotEmpty()) artists.sortedByDescending { it.isPrimary }.joinToString(", ") { it.name } else artist

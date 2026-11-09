@@ -21,6 +21,7 @@ import fr.spotifeur.data.LocalPlaylistStore
 import fr.spotifeur.data.MusicKind
 import fr.spotifeur.data.isLocalPlaylist
 import fr.spotifeur.data.isLocalTrack
+import fr.spotifeur.data.source
 import fr.spotifeur.data.PinnedStore
 import fr.spotifeur.data.SpotifyAccount
 import fr.spotifeur.data.spotifyAttribute
@@ -51,6 +52,9 @@ import java.io.IOException
 import java.util.Locale
 import java.util.UUID
 
+/** The catalogue a search reads. Without a Spotify account, only YouTube Music. */
+enum class SearchSource { Spotify, YouTubeMusic }
+
 data class Discovery(
     val query: String = "",
     val loading: Boolean = false,
@@ -58,7 +62,11 @@ data class Discovery(
     val nextPage: String? = null,
     val error: String? = null,
     val spotifyEnabled: Boolean = false,
-)
+    val source: SearchSource = SearchSource.Spotify,
+) {
+    /** The source actually searched: YouTube Music whenever Spotify is not signed in. */
+    val activeSource: SearchSource get() = if (spotifyEnabled) source else SearchSource.YouTubeMusic
+}
 
 data class AccountUi(
     val working: Boolean = false,
@@ -98,6 +106,20 @@ class SpotifeurModel(private val app: Application) : AndroidViewModel(app) {
     private var accountJob: Job? = null
     private val mutableAccount = MutableStateFlow(AccountUi())
     val account = mutableAccount.asStateFlow()
+    /** The app is used without a Spotify account: local files, YouTube Music and multi-service playlists. */
+    private val mutableGuest = MutableStateFlow(app.getSharedPreferences("music_library", 0).getBoolean(KEY_GUEST, false))
+    val guest = mutableGuest.asStateFlow()
+    fun continueWithoutAccount() {
+        preferences.edit { putBoolean(KEY_GUEST, true) }
+        mutableGuest.value = true
+        if (remote == null) mutableLibrary.value = LibraryUi(emptyLibrary())
+        search(discovery.value.query)
+    }
+    /** Back to the sign-in screen, from the settings of a guest. */
+    fun showSignIn() {
+        preferences.edit { putBoolean(KEY_GUEST, false) }
+        mutableGuest.value = false
+    }
     private val transport = SpotifyTransport()
     private val vault = SessionVault(app)
     private val devicePreferences = app.getSharedPreferences("spotify_device", 0)
@@ -157,6 +179,7 @@ class SpotifeurModel(private val app: Application) : AndroidViewModel(app) {
     val message = mutableMessage.asStateFlow()
 
     init {
+        if (mutableGuest.value) mutableLibrary.value = LibraryUi(emptyLibrary())
         viewModelScope.launch {
             localPlaylistStore.playlists.collect { playlists ->
                 playlists.forEach { ui.register(it.asMusic()) }
@@ -205,7 +228,7 @@ class SpotifeurModel(private val app: Application) : AndroidViewModel(app) {
     }
 
     fun toggleFavorite(item: Music) {
-        if (item.isLocalTrack || item.isLocalPlaylist) return
+        if (item.isLocalTrack || item.isLocalPlaylist || item.source != fr.spotifeur.data.MusicSource.Spotify || item.id.startsWith("ytm:")) return
         if (item.kind != MusicKind.Track && item.kind != MusicKind.Album && item.kind != MusicKind.Artist) {
             mutableMessage.value = "This item cannot be changed in your favorites."
             return
@@ -493,7 +516,7 @@ class SpotifeurModel(private val app: Application) : AndroidViewModel(app) {
     }
     /** Album and artists of a track, read through the catalogue contract used by detail pages. */
     suspend fun trackRelations(track: Music): List<Music> =
-        if (track.isLocalTrack) emptyList() else detailForActions(track)?.related.orEmpty()
+        if (track.source != fr.spotifeur.data.MusicSource.Spotify || catalog == null) emptyList() else detailForActions(track)?.related.orEmpty()
     /** Menu actions read the stored page first, so they work the same without network. */
     private suspend fun detailForActions(item: Music): CatalogDetail? {
         mutableDetails.value[item.id]?.content?.let { return it }
@@ -551,24 +574,44 @@ class SpotifeurModel(private val app: Application) : AndroidViewModel(app) {
             if (online.value) collections?.let { completeSavedTracks(it) }
             mutableLibrary.value.content?.savedTracks.orEmpty()
         }
-        item.isLocalPlaylist -> localPlaylistStore.get(item.id)?.tracks.orEmpty()
-        item.isLocalTrack || item.kind == MusicKind.Track -> listOf(item)
+        item.isLocalPlaylist -> withLocalFiles(localPlaylistStore.get(item.id)?.tracks.orEmpty())
+        item.isLocalTrack || item.kind == MusicKind.Track -> withLocalFiles(listOf(item))
         else -> {
             val known = detailForActions(item) ?: return emptyList()
-            if (known.nextPage == null || !online.value) known.tracks
+            withLocalFiles(if (known.nextPage == null || !online.value) known.tracks
             else {
-                val source = catalog ?: return known.tracks
+                val source = catalog ?: return withLocalFiles(known.tracks)
                 val complete = fullDetail(source, item, pageLimit = Int.MAX_VALUE)
                 mutableDetails.update { it + (item.id to DetailUi(complete)) }
                 withContext(Dispatchers.IO) { store.saveDetail(item.id, complete) }
                 complete.tracks
-            }
+            })
         }
     }
     }
+    /** Without a Spotify account, Spotify tracks play through their YouTube Music match. */
     fun play(queue: List<Music>, index: Int = 0) {
-        if (remote == null) { mutableMessage.value = "Sign in to your Spotify account to listen to music."; return }
-        player.play(queue, index)
+        val tracks = withLocalFiles(queue)
+        val selected = tracks.getOrNull(index)
+        if (selected != null && selected.isLocalTrack && selected.mediaUri == null) {
+            mutableMessage.value = app.getString(fr.spotifeur.R.string.local_file_missing, selected.title); return
+        }
+        player.play(tracks, index)
+    }
+
+    /** Local file references with the device file they point to, when there is one. */
+    fun withLocalFiles(tracks: List<Music>): List<Music> {
+        if (tracks.none { it.id.startsWith(fr.spotifeur.data.SPOTIFY_LOCAL_PREFIX) || (it.isLocalTrack && it.mediaUri == null) }) return tracks
+        val files = mutableLocalTracks.value
+        val byId = files.associateBy(Music::id)
+        return tracks.map { track ->
+            when {
+                track.mediaUri != null -> track
+                track.id.startsWith(fr.spotifeur.data.LOCAL_TRACK_PREFIX) -> byId[track.id] ?: fr.spotifeur.data.matchLocalFile(track, files)
+                    ?.let { track.copy(mediaUri = it.mediaUri, imageUrl = track.imageUrl ?: it.imageUrl) } ?: track
+                else -> fr.spotifeur.data.withLocalFile(track, files)
+            }
+        }
     }
     fun consumeMessage() { mutableMessage.value = null }
 
@@ -577,21 +620,49 @@ class SpotifeurModel(private val app: Application) : AndroidViewModel(app) {
         val trimmed = query.trim()
         val source = remote
         mutableDiscovery.update {
-            it.copy(query = query, results = emptyList(), nextPage = null, error = null, loading = source != null && trimmed.length >= 2)
+            it.copy(query = query, results = emptyList(), nextPage = null, error = null, loading = trimmed.length >= 2)
         }
         if (trimmed.length < 2) return
-        if (source == null) {
-            return
-        }
         if (!online.value) { showLocalResults(trimmed, null); return }
+        if (source == null || discovery.value.activeSource == SearchSource.YouTubeMusic) { loadYouTubePage(trimmed, null, debounce); return }
         loadPage(source, trimmed, null, debounce)
     }
 
+    fun setSearchSource(source: SearchSource) {
+        if (discovery.value.source == source) return
+        mutableDiscovery.update { it.copy(source = source) }
+        search(discovery.value.query, debounce = false)
+    }
+
     fun searchNext() {
-        val source = remote ?: return
         val state = discovery.value
         val token = state.nextPage ?: return
-        if (!state.loading) loadPage(source, state.query.trim(), token, debounce = false)
+        if (state.loading) return
+        val source = remote
+        if (source == null || state.activeSource == SearchSource.YouTubeMusic) loadYouTubePage(state.query.trim(), token, debounce = false)
+        else loadPage(source, state.query.trim(), token, debounce = false)
+    }
+
+    private fun loadYouTubePage(query: String, token: String?, debounce: Boolean) {
+        mutableDiscovery.update { it.copy(loading = true, error = null) }
+        searchJob = viewModelScope.launch {
+            try {
+                if (debounce) delay(400)
+                val page = withContext(Dispatchers.IO) {
+                    if (token == null) fr.spotifeur.data.youtube.YouTubeMusic.search(query)
+                    else fr.spotifeur.data.youtube.YouTubeMusic.searchMore(token)
+                }
+                mutableDiscovery.update {
+                    it.copy(loading = false, results = (it.results + page.tracks).distinctBy(Music::id),
+                        nextPage = page.next?.takeUnless { next -> next == token })
+                }
+            } catch (cancelled: CancellationException) {
+                throw cancelled
+            } catch (failure: Exception) {
+                val message = app.getString(fr.spotifeur.R.string.youtube_search_failed)
+                if (token == null) showLocalResults(query, message) else mutableDiscovery.update { it.copy(loading = false, error = message) }
+            }
+        }
     }
 
     private fun loadPage(source: SpotifySearch, query: String, token: String?, debounce: Boolean) {
@@ -628,7 +699,8 @@ class SpotifeurModel(private val app: Application) : AndroidViewModel(app) {
                 val content = mutableLibrary.value.content
                 val listened = fr.spotifeur.data.AudioIndex.get(app).all().map { it.track }.filter { it.title.isNotEmpty() }
                 val candidates = pins.value + content?.playlists.orEmpty() + content?.albums.orEmpty() +
-                    content?.artists.orEmpty() + content?.savedTracks.orEmpty() + listened
+                    content?.artists.orEmpty() + content?.savedTracks.orEmpty() + listened +
+                    localPlaylistStore.playlists.value.map { it.asMusic() } + mutableLocalTracks.value
                 val wanted = query.lowercase()
                 candidates.filter { it.title.lowercase().contains(wanted) || it.subtitle.lowercase().contains(wanted) }
                     .distinctBy(Music::id).take(MAX_LOCAL_RESULTS)
@@ -686,6 +758,8 @@ class SpotifeurModel(private val app: Application) : AndroidViewModel(app) {
 
     private fun finishAccount(session: SpotifySession) {
         SpotifyAccount.attach(session)
+        // A guest who signs in keeps the multi-service playlists; the library now comes from Spotify.
+        if (mutableLibrary.value.content?.let { it.playlists.isEmpty() && it.savedTrackCount == 0 } == true) mutableLibrary.value = LibraryUi()
         catalog = SpotifyCatalog(transport, session)
         collections = SpotifyLibrary(transport, session, requireNotNull(catalog))
         radio = SpotifyRadio(transport, session)
@@ -771,7 +845,8 @@ class SpotifeurModel(private val app: Application) : AndroidViewModel(app) {
         viewModelScope.launch(Dispatchers.IO) { store.clear() }
         remote = null
         catalog = null; collections = null; radio = null; lyrics = null
-        mutableLibrary.value = LibraryUi(); mutableDetails.value = emptyMap()
+        mutableLibrary.value = if (mutableGuest.value) LibraryUi(emptyLibrary()) else LibraryUi()
+        mutableDetails.value = emptyMap()
         savedIds.value = emptySet(); mutableRecent.value = emptyList()
         mutableAccount.value = AccountUi()
         mutableDiscovery.update { it.copy(spotifyEnabled = false) }
@@ -788,8 +863,125 @@ class SpotifeurModel(private val app: Application) : AndroidViewModel(app) {
         is IOException -> "The connection to Spotify was interrupted. Try again."
         else -> "This operation could not be completed. Try again."
     }
+    /** Tracks to add to a playlist, from one source; nothing is kept in the search history. */
+    suspend fun searchTracks(query: String, source: String): List<Music> {
+        val text = query.trim()
+        if (text.length < 2) return emptyList()
+        return when (source) {
+            TRACKS_SPOTIFY -> {
+                val search = remote ?: return emptyList()
+                val locale = app.resources.configuration.locales.get(0) ?: Locale.getDefault()
+                search.search(text, locale, null).items.filter { it.kind == MusicKind.Track }
+            }
+            TRACKS_YOUTUBE -> withContext(Dispatchers.IO) { fr.spotifeur.data.youtube.YouTubeMusic.search(text).tracks }
+            else -> withContext(Dispatchers.Default) {
+                val wanted = text.lowercase()
+                mutableLocalTracks.value.filter { it.title.lowercase().contains(wanted) || it.subtitle.lowercase().contains(wanted) || it.album.lowercase().contains(wanted) }
+            }
+        }
+    }
+
+    /** Saves [jpeg] as the cover of a multi-service playlist, or removes the cover when null. */
+    suspend fun setLocalPlaylistCover(id: String, jpeg: ByteArray?) {
+        val directory = java.io.File(app.filesDir, "playlist-covers")
+        val previous = localPlaylistStore.get(id)?.cover
+        val cover = if (jpeg == null) null else withContext(Dispatchers.IO) {
+            directory.mkdirs()
+            java.io.File(directory, "${UUID.randomUUID()}.jpg").apply { writeBytes(jpeg) }.toURI().toString()
+        }
+        localPlaylistStore.setCover(id, cover)
+        // A new address for every change, so cached thumbnails never show the old picture.
+        previous?.takeIf { it.startsWith("file:") }?.let { old ->
+            withContext(Dispatchers.IO) { runCatching { java.io.File(java.net.URI(old)).takeIf { it.parentFile == directory }?.delete() } }
+        }
+    }
+
+    private fun emptyLibrary() = HomeLibrary(emptyList(), emptyList(), emptyList(), emptyList(), 0)
+
+    // Playlists: deletion, import, export --------------------------------------------------------
+
+    /** A multi-service playlist is removed from the device; a Spotify playlist from the account's library. */
+    @androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
+    fun deletePlaylist(item: Music) {
+        if (item.isLocalPlaylist) {
+            localPlaylistStore.delete(item.id)
+            fr.spotifeur.playback.DownloadCenter.remove(app, item.id)
+            pinnedStore.pins.value.firstOrNull { it.id == item.id }?.let(pinnedStore::toggle)
+            mutableDetails.update { it - item.id }
+            return
+        }
+        if (item.kind != MusicKind.Playlist || item.id == LIKED_SONGS || !item.id.startsWith("spotify:playlist:")) return
+        viewModelScope.launch {
+            try {
+                spotifyPlaylists.unfollow(item.id)
+                mutableLibrary.value.content?.let { content ->
+                    installLibrary(content.copy(playlists = content.playlists.filterNot { it.id == item.id }), false)
+                    saveLibrary()
+                }
+                pinnedStore.pins.value.firstOrNull { it.id == item.id }?.let(pinnedStore::toggle)
+                fr.spotifeur.playback.DownloadCenter.remove(app, item.id)
+                mutableDetails.update { it - item.id }
+                mutableMessage.value = app.getString(fr.spotifeur.R.string.playlist_deleted, item.title)
+            } catch (cancelled: CancellationException) { throw cancelled }
+            catch (auth: SpotifyAuthRequired) { accountLost(auth) }
+            catch (failure: Exception) { mutableMessage.value = (failure as? SpotifyFailure)?.message ?: readable(failure) }
+        }
+    }
+
+    /** The playlist as CSV, with every track's source and reference. */
+    suspend fun exportCsv(item: Music): String {
+        val tracks = tracksOf(item)
+        return fr.spotifeur.data.PlaylistCsv.export(item.title, tracks)
+    }
+
+    suspend fun importCsv(text: String, fileName: String): Music {
+        val imported = withContext(Dispatchers.Default) { fr.spotifeur.data.PlaylistCsv.import(text, fileName.substringBeforeLast('.')) }
+        if (imported.tracks.isEmpty()) throw IllegalArgumentException(app.getString(fr.spotifeur.R.string.import_no_tracks))
+        return createImported(imported.name, completeSpotifyTracks(imported.tracks))
+    }
+
+    /** A YouTube, YouTube Music or Spotify playlist link, copied as a multi-service playlist. */
+    suspend fun importLink(link: String): Music {
+        fr.spotifeur.data.youtube.youTubePlaylistId(link)?.let { id ->
+            val playlist = withContext(Dispatchers.IO) { fr.spotifeur.data.youtube.YouTubeMusic.playlist(id) }
+            return createImported(playlist.title, playlist.tracks)
+        }
+        val spotifyId = fr.spotifeur.data.spotifyPlaylistId(link)
+            ?: throw IllegalArgumentException(app.getString(fr.spotifeur.R.string.import_unknown_link))
+        val source = catalog
+        if (source != null) {
+            val item = Music("spotify:playlist:$spotifyId", "", "", MusicKind.Playlist)
+            val detail = fullDetail(source, item, pageLimit = Int.MAX_VALUE)
+            return createImported(detail.item.title.ifBlank { "Spotify" }, detail.tracks)
+        }
+        val content = withContext(Dispatchers.IO) { fr.spotifeur.data.SpotifyPublicPlaylist.read(spotifyId) }
+        if (content.tracks.isEmpty()) throw IllegalArgumentException(app.getString(fr.spotifeur.R.string.import_no_tracks))
+        return createImported(content.name.ifBlank { "Spotify" }, content.tracks)
+    }
+
+    /** With an account, Spotify tracks read from a file get their covers and current metadata. */
+    private suspend fun completeSpotifyTracks(tracks: List<Music>): List<Music> {
+        val source = catalog ?: return tracks
+        val ids = tracks.filter { it.id.startsWith("spotify:track:") && it.imageUrl == null }.map(Music::id)
+        if (ids.isEmpty() || !online.value) return tracks
+        val known = try { source.hydrate(ids).associateBy(Music::id) } catch (cancelled: CancellationException) { throw cancelled } catch (_: Exception) { emptyMap() }
+        return tracks.map { known[it.id] ?: it }
+    }
+
+    private fun createImported(name: String, tracks: List<Music>): Music {
+        val playlist = localPlaylistStore.create(name.ifBlank { app.getString(fr.spotifeur.R.string.import_default_name) }, withLocalFiles(tracks))
+        val music = playlist.asMusic()
+        ui.register(music)
+        mutableMessage.value = app.getString(fr.spotifeur.R.string.import_done, music.title, playlist.tracks.size)
+        return music
+    }
+
     companion object {
         const val LIKED_SONGS = "spotify:collection:tracks"
+        const val TRACKS_SPOTIFY = "spotify"
+        const val TRACKS_YOUTUBE = "youtube"
+        const val TRACKS_FILES = "files"
+        private const val KEY_GUEST = "guest"
         private const val KEY_PENDING_LIKES = "pending_likes"
         private const val KEY_PLAYLIST_COVERS = "playlist_covers"
         private const val KEY_PENDING_UNLIKES = "pending_unlikes"

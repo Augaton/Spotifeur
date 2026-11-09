@@ -16,6 +16,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -67,6 +68,11 @@ fun AccountScreen(model: SpotifeurModel, account: AccountUi) {
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
                 SignInForm(account, model)
+                if (account.codeLength == null) OutlinedButton(
+                    onClick = model::continueWithoutAccount,
+                    enabled = !account.working,
+                    modifier = Modifier.fillMaxWidth().padding(top = 24.dp),
+                ) { Text(ctx.getString(R.string.continue_without_account)) }
             }
         }
     }

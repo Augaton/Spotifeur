@@ -281,6 +281,7 @@ fun ArtistDetailScreen(
                         onSave = { model.toggleFavorite(current) },
                         onPin = { ui.togglePin(current) },
                         onRadio = { ui.startRadio(current) { navController.openMusic(ui, it) } },
+                        ui = ui,
                     )
                 }
                 if (songs.isEmpty() && detail?.loading != false) item(key = "artist_loading") {

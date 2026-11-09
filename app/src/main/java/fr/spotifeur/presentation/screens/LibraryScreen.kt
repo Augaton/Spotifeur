@@ -95,7 +95,9 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
 import racra.compose.smooth_corner_rect_library.AbsoluteSmoothCornerShape
 
-private val libraryTabs = listOf(LibraryTabId.PLAYLISTS, LibraryTabId.LIKED, LibraryTabId.ALBUMS, LibraryTabId.ARTISTS, LibraryTabId.LOCAL, LibraryTabId.DOWNLOADS)
+private val accountTabs = listOf(LibraryTabId.PLAYLISTS, LibraryTabId.LIKED, LibraryTabId.ALBUMS, LibraryTabId.ARTISTS, LibraryTabId.LOCAL, LibraryTabId.DOWNLOADS)
+/** Without a Spotify account there are no liked songs, saved albums or followed artists. */
+private val guestTabs = listOf(LibraryTabId.PLAYLISTS, LibraryTabId.LOCAL, LibraryTabId.DOWNLOADS)
 
 private fun sortOptions(tab: LibraryTabId): List<SortOption> = when (tab) {
     LibraryTabId.PLAYLISTS -> listOf(SortOption.SongDefaultOrder, SortOption.PlaylistNameAZ, SortOption.PlaylistNameZA)
@@ -134,15 +136,18 @@ fun LibraryScreen(model: SpotifeurModel, navController: NavHostController, paddi
     val ui = model.ui
     val library by model.library.collectAsStateWithLifecycle()
     val stable by ui.stablePlayerState.collectAsStateWithLifecycle()
+    val discovery by model.discovery.collectAsStateWithLifecycle()
+    val libraryTabs = if (discovery.spotifyEnabled) accountTabs else guestTabs
     var savedTab by rememberSaveable { mutableStateOf(0) }
-    val pagerState = rememberPagerState(initialPage = savedTab) { libraryTabs.size }
+    val pagerState = rememberPagerState(initialPage = savedTab.coerceIn(0, libraryTabs.lastIndex)) { libraryTabs.size }
     val requestedTab by ui.requestedLibraryTab.collectAsStateWithLifecycle()
     LaunchedEffect(requestedTab) {
         val requested = libraryTabs.indexOfFirst { it.storageKey == requestedTab }
         if (requested >= 0) { pagerState.scrollToPage(requested); ui.requestedLibraryTab.value = null }
     }
     val scope = rememberCoroutineScope()
-    val currentTab = libraryTabs[pagerState.currentPage]
+    val currentTab = libraryTabs[pagerState.currentPage.coerceIn(0, libraryTabs.lastIndex)]
+    var importing by remember { mutableStateOf(false) }
     var sortKeys by rememberSaveable { mutableStateOf(mapOf<String, String>()) }
     var albumsAsList by rememberSaveable { mutableStateOf(false) }
     var showSortSheet by remember { mutableStateOf(false) }
@@ -152,7 +157,6 @@ fun LibraryScreen(model: SpotifeurModel, navController: NavHostController, paddi
     val localTitle = stringResource(R.string.library_tab_local)
     val downloads by ui.downloads.collectAsStateWithLifecycle()
     val downloadsTitle = stringResource(R.string.library_tab_downloads)
-    val haptic = LocalHapticFeedback.current
 
     LaunchedEffect(pagerState) {
         snapshotFlow { pagerState.currentPage }.distinctUntilChanged().collect { savedTab = it }
@@ -166,7 +170,7 @@ fun LibraryScreen(model: SpotifeurModel, navController: NavHostController, paddi
     val open: (Music) -> Unit = { navController.openMusic(ui, it) }
     var optionsFor by remember { mutableStateOf<Music?>(null) }
     val pin: (Music) -> Unit = {
-        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+        // The long-click handler of the card already vibrates.
         optionsFor = it
     }
 
@@ -281,7 +285,8 @@ fun LibraryScreen(model: SpotifeurModel, navController: NavHostController, paddi
                                 showSortButton = options.isNotEmpty(),
                                 onSortClick = { showSortSheet = true },
                                 isPlaylistTab = currentTab == LibraryTabId.PLAYLISTS,
-                                showImportButton = false,
+                                showImportButton = true,
+                                onImportM3uClick = { importing = true },
                                 isShuffleEnabled = stable.isShuffleEnabled,
                             )
                         }
@@ -302,7 +307,7 @@ fun LibraryScreen(model: SpotifeurModel, navController: NavHostController, paddi
                             } else {
                                 HorizontalPager(state = pagerState, modifier = Modifier.fillMaxSize()) { page ->
                                     when (libraryTabs[page]) {
-                                        LibraryTabId.PLAYLISTS -> PlaylistsTab(localPlaylists.map { it.asMusic() } + content.playlists.sortedFor(sortOf(LibraryTabId.PLAYLISTS)), bottomPadding, open, pin)
+                                        LibraryTabId.PLAYLISTS -> PlaylistsTab((localPlaylists.map { it.asMusic() } + content.playlists).sortedFor(sortOf(LibraryTabId.PLAYLISTS)), bottomPadding, open, pin)
                                         LibraryTabId.LIKED -> LikedTab(model, ui, navController, content, bottomPadding)
                                         LibraryTabId.ALBUMS -> AlbumsTab(content.albums.sortedFor(sortOf(LibraryTabId.ALBUMS)), albumsAsList, ui, bottomPadding, open, pin)
                                         LibraryTabId.ARTISTS -> ArtistsTab(content.artists.sortedFor(sortOf(LibraryTabId.ARTISTS)), bottomPadding, open, pin)
@@ -319,6 +324,10 @@ fun LibraryScreen(model: SpotifeurModel, navController: NavHostController, paddi
     }
 
     MusicOptionsHost(ui, navController, optionsFor) { optionsFor = null }
+    if (importing) fr.spotifeur.presentation.components.ImportPlaylistDialog(model, onDismiss = { importing = false }) { imported ->
+        importing = false
+        navController.openMusic(ui, imported)
+    }
     if (creatingPlaylist) fr.spotifeur.presentation.components.SpotifyPlaylistEditor(model, onDismiss = { creatingPlaylist = false },
         onSaved = { created -> created?.let { ui.register(it); navController.openMusic(ui, it) } })
 
@@ -343,7 +352,7 @@ private fun PlaylistsTab(playlists: List<Music>, bottom: Dp, open: (Music) -> Un
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
         contentPadding = PaddingValues(start = 12.dp, end = 12.dp, top = 4.dp, bottom = bottom),
-        verticalArrangement = Arrangement.spacedBy(8.dp),
+        verticalArrangement = Arrangement.spacedBy(fr.spotifeur.presentation.components.listSpacing()),
     ) {
         items(playlists, key = Music::id) { item ->
             PlaylistItem(
@@ -368,7 +377,7 @@ private fun AlbumsTab(
         LazyColumn(
             modifier = Modifier.fillMaxSize(),
             contentPadding = PaddingValues(start = 12.dp, end = 12.dp, top = 4.dp, bottom = bottom),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
+            verticalArrangement = Arrangement.spacedBy(fr.spotifeur.presentation.components.listSpacing()),
         ) {
             items(albums, key = Music::id) { item ->
                 AlbumListItem(
@@ -384,8 +393,8 @@ private fun AlbumsTab(
             columns = GridCells.Fixed(2),
             modifier = Modifier.fillMaxSize(),
             contentPadding = PaddingValues(start = 14.dp, end = 14.dp, top = 4.dp, bottom = bottom),
-            verticalArrangement = Arrangement.spacedBy(14.dp),
-            horizontalArrangement = Arrangement.spacedBy(14.dp),
+            verticalArrangement = Arrangement.spacedBy(if (fr.spotifeur.presentation.components.LocalCompactLists.current) 8.dp else 14.dp),
+            horizontalArrangement = Arrangement.spacedBy(if (fr.spotifeur.presentation.components.LocalCompactLists.current) 8.dp else 14.dp),
         ) {
             items(albums, key = Music::id) { item ->
                 AlbumGridItemRedesigned(
@@ -404,7 +413,7 @@ private fun ArtistsTab(artists: List<Music>, bottom: Dp, open: (Music) -> Unit, 
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
         contentPadding = PaddingValues(start = 12.dp, end = 12.dp, top = 4.dp, bottom = bottom),
-        verticalArrangement = Arrangement.spacedBy(8.dp),
+        verticalArrangement = Arrangement.spacedBy(fr.spotifeur.presentation.components.listSpacing()),
     ) {
         items(artists, key = Music::id) { item ->
             ArtistListItem(artist = item.toArtist(), onClick = { open(item) }, onLongPress = { onLongPress(item) })
@@ -436,7 +445,7 @@ private fun LikedTab(
         state = listState,
         modifier = Modifier.fillMaxSize(),
         contentPadding = PaddingValues(start = 12.dp, end = 12.dp, top = 4.dp, bottom = bottom),
-        verticalArrangement = Arrangement.spacedBy(8.dp),
+        verticalArrangement = Arrangement.spacedBy(fr.spotifeur.presentation.components.listSpacing()),
     ) {
         itemsIndexed(songs, key = { index, song -> "$index-${song.id}" }) { _, song ->
             val current = stable.currentSong?.id == song.id
@@ -487,7 +496,7 @@ private fun LocalTab(
         else -> LazyColumn(
             modifier = Modifier.fillMaxSize(),
             contentPadding = PaddingValues(start = 12.dp, end = 12.dp, top = 4.dp, bottom = bottom),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
+            verticalArrangement = Arrangement.spacedBy(fr.spotifeur.presentation.components.listSpacing()),
         ) {
             items(songs, key = { it.id }) { song ->
                 val current = stable.currentSong?.id == song.id
@@ -526,7 +535,7 @@ private fun DownloadsTab(
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
         contentPadding = PaddingValues(start = 12.dp, end = 12.dp, top = 4.dp, bottom = bottom),
-        verticalArrangement = Arrangement.spacedBy(8.dp),
+        verticalArrangement = Arrangement.spacedBy(fr.spotifeur.presentation.components.listSpacing()),
     ) {
         val groups = listOf(
             R.string.downloads_playlists to entries.filter { it.collection.item.kind != MusicKind.Track && it.collection.item.kind != MusicKind.Album },

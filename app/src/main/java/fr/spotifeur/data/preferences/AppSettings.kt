@@ -41,7 +41,19 @@ data class AppSettings(
     val offlineMode: Boolean = false,
     val tapBackgroundClosesPlayer: Boolean = false,
     val hapticsEnabled: Boolean = true,
+    /** Source badge on each track of a multi-service playlist. */
+    val showSourceBadges: Boolean = true,
+    /** Smaller rows and spacing in track and library lists. */
+    val compactLists: Boolean = false,
+    /** Home shelves: order, visibility, layout and size, as [HomeLayout] encodes them. Empty: defaults. */
+    val homeShelves: String = "",
+    /** Album and playlist page buttons: order and which ones are in the bar, as [DetailActions] encodes them. */
+    val albumActions: String = "",
+    val playlistActions: String = "",
 ) {
+    fun actions(page: DetailPage): List<ActionSlot> =
+        DetailActions.decode(page, if (page == DetailPage.ALBUM) albumActions else playlistActions)
+    val homeLayout: List<ShelfConfig> get() = HomeLayout.decode(homeShelves)
     fun toJson(): JSONObject = JSONObject()
         .put("themeMode", themeMode).put("language", language).put("useSmoothCorners", useSmoothCorners)
         .put("disableBlur", disableBlur).put("showScrollbar", showScrollbar).put("playerTheme", playerTheme)
@@ -56,6 +68,8 @@ data class AppSettings(
         .put("audioCacheLimitMb", audioCacheLimitMb).put("preloadTracks", preloadTracks)
         .put("preloadEntireQueue", preloadEntireQueue).put("preloadOnMobile", preloadOnMobile).put("offlineMode", offlineMode)
         .put("tapBackgroundClosesPlayer", tapBackgroundClosesPlayer).put("hapticsEnabled", hapticsEnabled)
+        .put("showSourceBadges", showSourceBadges).put("compactLists", compactLists).put("homeShelves", homeShelves)
+        .put("albumActions", albumActions).put("playlistActions", playlistActions)
 
     companion object {
         const val THEME_SYSTEM = "system"
@@ -101,6 +115,11 @@ data class AppSettings(
                 offlineMode = json.optBoolean("offlineMode", d.offlineMode),
                 tapBackgroundClosesPlayer = json.optBoolean("tapBackgroundClosesPlayer", d.tapBackgroundClosesPlayer),
                 hapticsEnabled = json.optBoolean("hapticsEnabled", d.hapticsEnabled),
+                showSourceBadges = json.optBoolean("showSourceBadges", d.showSourceBadges),
+                compactLists = json.optBoolean("compactLists", d.compactLists),
+                homeShelves = json.optString("homeShelves", d.homeShelves),
+                albumActions = json.optString("albumActions", d.albumActions),
+                playlistActions = json.optString("playlistActions", d.playlistActions),
             )
         }
     }

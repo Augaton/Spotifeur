@@ -187,7 +187,7 @@ internal fun CollectionDetailLayout(
                     end = if (showScrollBar) 24.dp else 16.dp,
                     bottom = fabBottomPadding + 80.dp // To account for FAB
                 ),
-                verticalArrangement = Arrangement.spacedBy(8.dp),
+                verticalArrangement = Arrangement.spacedBy(fr.spotifeur.presentation.components.listSpacing()),
                 content = content,
             )
 

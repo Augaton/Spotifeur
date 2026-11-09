@@ -45,6 +45,8 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import fr.spotifeur.R
 import fr.spotifeur.data.Music
+import fr.spotifeur.data.isLocalTrack
+import fr.spotifeur.data.source
 import fr.spotifeur.presentation.viewmodel.PlayerViewModel
 
 /** The small marker that tells a device-only playlist from a Spotify one. */
@@ -84,7 +86,7 @@ fun PlaylistNameDialog(title: String, initial: String = "", onDismiss: () -> Uni
     )
 }
 
-/** Chooses the local playlist that receives [item]: a track, an album, an artist or a playlist. */
+/** Chooses the playlist that receives [item]: a track, an album, an artist or a playlist. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AddToLocalPlaylistSheet(item: Music, ui: PlayerViewModel, onDismiss: () -> Unit) {
@@ -96,7 +98,10 @@ fun AddToLocalPlaylistSheet(item: Music, ui: PlayerViewModel, onDismiss: () -> U
     var username by remember { mutableStateOf<String?>(null) }
     var adding by remember { mutableStateOf(false) }
     LaunchedEffect(Unit) { username = runCatching { SpotifyAccount.require(context).username() }.getOrNull() }
-    val accountPlaylists = library.content?.playlists.orEmpty().filter { username != null && it.ownerUsername == username }
+    // A Spotify playlist takes Spotify tracks and local files; multi-service playlists take everything.
+    // Local files are added as Spotify's own local file references.
+    val spotifyItem = item.kind != fr.spotifeur.data.MusicKind.Track || item.source != fr.spotifeur.data.MusicSource.YouTubeMusic
+    val accountPlaylists = library.content?.playlists.orEmpty().filter { spotifyItem && username != null && it.ownerUsername == username }
     var creating by remember { mutableStateOf(false) }
     ModalBottomSheet(onDismissRequest = onDismiss, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
         Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp).navigationBarsPadding()) {

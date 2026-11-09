@@ -58,7 +58,11 @@ class MainActivity : ComponentActivity() {
                 val quality = remember(settings.showQualityInLists, qualityRevision) {
                     { song: Song -> if (settings.showQualityInLists) model.ui.qualityOf(song) else null }
                 }
-                CompositionLocalProvider(LocalShowScrollbar provides settings.showScrollbar, LocalTrackQuality provides quality) {
+                CompositionLocalProvider(
+                    LocalShowScrollbar provides settings.showScrollbar, LocalTrackQuality provides quality,
+                    fr.spotifeur.presentation.components.LocalCompactLists provides settings.compactLists,
+                    fr.spotifeur.presentation.components.LocalSourceBadges provides settings.showSourceBadges,
+                ) {
                     SpotifeurMain(model)
                 }
             }

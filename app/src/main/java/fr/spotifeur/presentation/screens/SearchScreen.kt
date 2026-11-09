@@ -1,5 +1,8 @@
 package fr.spotifeur.presentation.screens
 
+import androidx.compose.material3.SegmentedButton
+import androidx.compose.material3.SegmentedButtonDefaults
+import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -104,11 +107,10 @@ fun SearchScreen(
     var filter by rememberSaveable { mutableStateOf(SearchFilterType.ALL) }
     var selected by remember { mutableStateOf<Song?>(null) }
     val keyboard = LocalSoftwareKeyboardController.current
-    val haptic = LocalHapticFeedback.current
     val statusBarTopInset = WindowInsets.systemBars.asPaddingValues().calculateTopPadding()
     val colorScheme = MaterialTheme.colorScheme
-    val results = remember(discovery.results, filter) {
-        val kind = filter.kind()
+    val results = remember(discovery.results, filter, discovery.activeSource) {
+        val kind = filter.kind().takeIf { discovery.activeSource == fr.spotifeur.SearchSource.Spotify }
         discovery.results.filter { kind == null || it.kind == kind }
     }
     val songs = remember(results, saved) { results.filter { it.kind == MusicKind.Track }.map { it.toSong(it.id in saved) } }
@@ -119,7 +121,7 @@ fun SearchScreen(
     }
     var optionsFor by remember { mutableStateOf<Music?>(null) }
     val showOptions: (Music) -> Unit = {
-        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+        // The long-click handler of the card already vibrates.
         optionsFor = it
     }
     LaunchedEffect(listState, results.size, discovery.nextPage) {
@@ -238,7 +240,23 @@ fun SearchScreen(
                         )
                     }
                 } else {
-                    FlowRow(
+                    if (discovery.spotifyEnabled) {
+                        // The catalogue searched: Spotify, or YouTube Music without any account.
+                        SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth().padding(top = 8.dp, start = 8.dp, end = 8.dp)) {
+                            val sources = fr.spotifeur.SearchSource.entries
+                            sources.forEachIndexed { index, source ->
+                                SegmentedButton(
+                                    selected = discovery.source == source,
+                                    onClick = { model.setSearchSource(source) },
+                                    shape = SegmentedButtonDefaults.itemShape(index, sources.size),
+                                ) {
+                                    Text(stringResource(if (source == fr.spotifeur.SearchSource.Spotify) R.string.search_source_spotify else R.string.search_source_youtube))
+                                }
+                            }
+                        }
+                    }
+                    // YouTube Music results are tracks only.
+                    if (discovery.activeSource == fr.spotifeur.SearchSource.Spotify) FlowRow(
                         modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp, horizontal = 8.dp),
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
                         verticalArrangement = Arrangement.spacedBy(0.dp)

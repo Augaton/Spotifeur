@@ -12,6 +12,8 @@ internal object SpotifyAccount {
     val transport = SpotifyTransport()
     private val lock = Mutex()
     @Volatile private var active: SpotifySession? = null
+    /** Without a session, Spotify tracks play through their YouTube Music match. */
+    val signedIn: Boolean get() = active != null
     private val sessionListeners = java.util.concurrent.CopyOnWriteArraySet<() -> Unit>()
     fun onSessionReplaced(listener: () -> Unit): AutoCloseable {
         sessionListeners.add(listener)

@@ -136,7 +136,7 @@ internal class SpotifyPlaylists(private val context: Context) : AutoCloseable {
         withTimeout(30_000) {
             while (true) {
                 val tail = page(before, minOf(100, uris.size))
-                if (tail.total >= before + uris.size && tail.uris.take(minOf(100, uris.size)) == uris.take(100)) break
+                if (tail.total >= before + uris.size && tail.entries.take(minOf(100, uris.size)) == uris.take(100)) break
                 delay(500)
             }
         }
@@ -217,7 +217,21 @@ internal fun playlistUri(uri: String): String = canonicalMusicUri(uri)?.takeIf {
     ?: throw SpotifyFailure("Invalid Spotify playlist.")
 private fun spotifyTracks(tracks: List<Music>): List<String> = tracks.map { track ->
     canonicalMusicUri(track.id)?.takeIf { it.startsWith("spotify:track:") }
-        ?: throw SpotifyFailure("A Spotify playlist only accepts Spotify tracks.")
+        ?: spotifyLocalUri(track)
+        ?: throw SpotifyFailure("A Spotify playlist only accepts Spotify tracks and local files.")
+}
+
+/**
+ * The reference Spotify's apps use for a local file in a playlist:
+ * `spotify:local:{artist}:{album}:{title}:{seconds}`, each part form-encoded. Every Spotify app
+ * that lists the device's local files plays the file whose tags match.
+ */
+internal fun spotifyLocalUri(track: Music): String? {
+    if (track.id.startsWith(SPOTIFY_LOCAL_PREFIX)) return track.id
+    if (!track.id.startsWith(LOCAL_TRACK_PREFIX) || track.title.isBlank()) return null
+    fun encode(value: String) = java.net.URLEncoder.encode(value, "UTF-8")
+    return SPOTIFY_LOCAL_PREFIX + listOf(encode(track.subtitle), encode(track.album), encode(track.title), (track.durationMs / 1000).toString())
+        .joinToString(":")
 }
 internal fun createPlaylistRequest(name: String, uris: List<String>): ByteArray = proto {
     writeString(1, "")

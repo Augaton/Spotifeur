@@ -63,4 +63,42 @@ class SpotifyPlaylistWriteTest {
             Log.i("SpotifeurPlaylistTest", "test playlist removed and library cache refreshed")
         }
     }
+
+    /** A local file added from Spotifeur is stored as Spotify's own `spotify:local:` reference and read back as such. */
+    @Test fun localFileReference(): Unit = runBlocking {
+        assumeTrue(InstrumentationRegistry.getArguments().getString("spotifyPlaylistWrite") == "true")
+        val app = InstrumentationRegistry.getInstrumentation().targetContext
+        val session = SpotifyAccount.require(app)
+        val catalog = SpotifyCatalog(SpotifyAccount.transport, session)
+        val library = SpotifyLibrary(SpotifyAccount.transport, session, catalog).load()
+        val track = library.savedTracks.first()
+        val file = Music("${LOCAL_TRACK_PREFIX}1", "Spotifeur test: file", "Spotifeur & Co", MusicKind.Track, album = "Tests", durationMs = 123_400)
+        val service = SpotifyPlaylists(app)
+        library.playlists.filter { it.title == "Spotifeur — local file test" }.forEach { service.unfollow(it.id) }
+        var playlist: Music? = null
+        try {
+            playlist = service.create("Spotifeur — local file test", listOf(track))
+            service.add(playlist.id, listOf(file))
+            val expected = "spotify:local:Spotifeur+%26+Co:Tests:Spotifeur+test%3A+file:123"
+            withTimeout(45_000) {
+                while (true) {
+                    val remote = SpotifyCatalog(SpotifyAccount.transport, session).detail(playlist)
+                    if (remote.tracks.map(Music::id) == listOf(track.id, expected)) {
+                        val local = remote.tracks.last()
+                        assertEquals("Spotifeur test: file", local.title)
+                        assertEquals("Spotifeur & Co", local.subtitle)
+                        assertEquals(123_000, local.durationMs)
+                        break
+                    }
+                    delay(1500)
+                }
+            }
+            Log.i("SpotifeurPlaylistTest", "local file reference stored and read back")
+        } finally {
+            playlist?.let { service.unfollow(it.id) }
+            val cache = CatalogStore(app)
+            cache.saveLibrary(SpotifyLibrary(SpotifyAccount.transport, session, catalog).load(cache.loadLibrary()))
+            service.close()
+        }
+    }
 }

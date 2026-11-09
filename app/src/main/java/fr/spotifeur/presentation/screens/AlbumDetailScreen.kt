@@ -2,6 +2,7 @@ package fr.spotifeur.presentation.screens
 
 import androidx.compose.material.icons.rounded.Share
 import fr.spotifeur.presentation.utils.shareMusic
+import fr.spotifeur.presentation.utils.spotifyShareUrl
 import androidx.compose.foundation.layout.FlowRow
 import fr.spotifeur.ui.theme.SpotifeurStatusBarStyle
 import fr.spotifeur.utils.formatSongCount
@@ -311,6 +312,7 @@ internal fun CollapsingAlbumTopBar(
 
 internal val DetailFabShape = RoundedStarShape(sides = 8, curve = 0.05, rotation = 0f)
 
+/** Buttons of an album or artist page, laid out as chosen in Settings. */
 @Composable
 internal fun DetailActionsRow(
     item: Music,
@@ -320,37 +322,22 @@ internal fun DetailActionsRow(
     onSave: () -> Unit,
     onPin: () -> Unit,
     onRadio: () -> Unit,
-    ui: PlayerViewModel? = null,
-    extra: @Composable () -> Unit = {},
+    ui: PlayerViewModel,
+    showRadio: Boolean = true,
 ) {
     val context = androidx.compose.ui.platform.LocalContext.current
-    FlowRow(
-        Modifier.fillMaxWidth().padding(bottom = 8.dp),
-        horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally),
-        verticalArrangement = Arrangement.spacedBy(8.dp),
-    ) {
-        if (ui != null) fr.spotifeur.presentation.components.CollectionDownloadButton(ui, item)
-        if (canSave) FilledTonalIconButton(onClick = onSave) {
-            Icon(
-                if (isSaved) Icons.Rounded.Favorite else Icons.Rounded.FavoriteBorder,
-                if (isSaved) stringResource(R.string.saved_remove) else stringResource(R.string.saved_add),
-            )
-        }
-        FilledTonalIconButton(onClick = onRadio) { Icon(Icons.Rounded.Radio, stringResource(R.string.radio_related)) }
-        FilledTonalIconButton(onClick = { context.shareMusic(item) }) { Icon(Icons.Rounded.Share, stringResource(R.string.share_item, item.title)) }
-        FilledTonalIconButton(
-            onClick = onPin,
-            colors = if (isPinned) IconButtonDefaults.filledTonalIconButtonColors(
-                containerColor = MaterialTheme.colorScheme.primary,
-                contentColor = MaterialTheme.colorScheme.onPrimary,
-            ) else IconButtonDefaults.filledTonalIconButtonColors(),
-        ) {
-            Icon(
-                if (isPinned) Icons.Rounded.PushPin else Icons.Outlined.PushPin,
-                if (isPinned) stringResource(R.string.pin_remove) else stringResource(R.string.pin_add_home),
-            )
-        }
-        extra()
+    val actions = buildList {
+        add(downloadAction(ui, item))
+        if (canSave) add(ActionSpec(fr.spotifeur.data.preferences.DetailAction.SAVE,
+            if (isSaved) Icons.Rounded.Favorite else Icons.Rounded.FavoriteBorder,
+            stringResource(if (isSaved) R.string.saved_remove else R.string.saved_add), onSave, selected = isSaved))
+        add(ActionSpec(fr.spotifeur.data.preferences.DetailAction.PIN,
+            if (isPinned) Icons.Rounded.PushPin else Icons.Outlined.PushPin,
+            stringResource(if (isPinned) R.string.pin_remove else R.string.pin_add_home), onPin, selected = isPinned))
+        if (showRadio) add(ActionSpec(fr.spotifeur.data.preferences.DetailAction.RADIO, Icons.Rounded.Radio, stringResource(R.string.radio_related), onRadio))
+        if (item.spotifyShareUrl() != null) add(ActionSpec(fr.spotifeur.data.preferences.DetailAction.SHARE, Icons.Rounded.Share,
+            stringResource(R.string.share_item, item.title), { context.shareMusic(item) }))
     }
+    DetailActionBar(fr.spotifeur.data.preferences.DetailPage.ALBUM, actions, ui)
 }
 

@@ -165,7 +165,8 @@ class SpotifyPlayer(context: Context, scope: CoroutineScope) : AutoCloseable {
         val duration = player.duration.takeUnless { it == C.TIME_UNSET || it < 0 }
             ?: queue.getOrNull(index)?.durationMs?.toLong() ?: 0
         val error = player.playerError?.let { failure ->
-            generateSequence<Throwable>(failure) { it.cause }.take(12).filterIsInstance<SpotifyFailure>().firstOrNull()?.message
+            generateSequence<Throwable>(failure) { it.cause }.take(12)
+                .firstOrNull { it is SpotifyFailure || it is fr.spotifeur.data.youtube.YouTubeFailure }?.message
                 ?: if (!fr.spotifeur.data.NetworkMonitor.online.value) "This track is not available offline."
                 else playbackErrorMessage(failure.errorCode)
         }
@@ -193,7 +194,7 @@ internal fun playbackErrorMessage(code: Int): String = when (code) {
     PlaybackException.ERROR_CODE_IO_NETWORK_CONNECTION_FAILED,
     PlaybackException.ERROR_CODE_IO_NETWORK_CONNECTION_TIMEOUT,
     PlaybackException.ERROR_CODE_TIMEOUT -> "The audio connection was interrupted. Check the network, then try again."
-    PlaybackException.ERROR_CODE_IO_BAD_HTTP_STATUS -> "Spotify could not provide the audio stream. Try again in a moment."
+    PlaybackException.ERROR_CODE_IO_BAD_HTTP_STATUS -> "The audio stream could not be provided. Try again in a moment."
     PlaybackException.ERROR_CODE_DRM_LICENSE_ACQUISITION_FAILED,
     PlaybackException.ERROR_CODE_DRM_PROVISIONING_FAILED -> "Playback authorization could not be obtained. Try again."
     PlaybackException.ERROR_CODE_DRM_DISALLOWED_OPERATION -> "Spotify does not allow this track to play in this session."
@@ -204,19 +205,26 @@ internal fun playbackErrorMessage(code: Int): String = when (code) {
     PlaybackException.ERROR_CODE_AUDIO_TRACK_WRITE_FAILED -> "Audio output could not start. Check the audio device, then try again."
     else -> "This track cannot be played. Try again or pick another track."
 }
-private fun Music.isPlayableTrack(): Boolean =
-    kind == MusicKind.Track && (id.startsWith("spotify:track:") || (isLocalTrack && mediaUri != null))
+private fun Music.isPlayableTrack(): Boolean = kind == MusicKind.Track &&
+    (id.startsWith("spotify:track:") || id.startsWith(fr.spotifeur.data.youtube.YTM_TRACK_PREFIX) || (isLocalTrack && mediaUri != null))
 
-private fun mediaItem(track: Music): MediaItem = MediaItem.Builder().setMediaId(track.id)
-    .setUri(track.mediaUri ?: track.id)
-    .apply { if (!track.isLocalTrack) setMimeType(MimeTypes.APPLICATION_M3U8) }
-    .apply { if (!BuildConfig.NATIVE_RUNTIME && !track.isLocalTrack) setDrmConfiguration(MediaItem.DrmConfiguration.Builder(C.WIDEVINE_UUID)
-        .setLicenseUri("https://spclient.wg.spotify.com/widevine-license/v1/audio/license")
-        .setMultiSession(true).setPlayClearContentWithoutKey(true).build()) }
-    .setMediaMetadata(MediaMetadata.Builder().setTitle(track.title).setArtist(track.subtitle)
-        .setArtworkUri(fr.spotifeur.data.largestSpotifyImage(track.imageUrl)?.let(Uri::parse)).setIsPlayable(true).setIsBrowsable(false)
-        .setExtras(Bundle().apply {
-            putInt("duration", track.durationMs); putInt("artwork", track.artwork)
-            putString("album", track.album); putString("mediaUri", track.mediaUri); putString("quality", track.quality)
-        }).build()).build()
+@androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
+private fun mediaItem(track: Music): MediaItem {
+    // YouTube Music tracks, and Spotify tracks without a Spotify account, are read from YouTube Music.
+    val youtube = YouTubeUris.of(track, fr.spotifeur.data.SpotifyAccount.signedIn)
+    val spotify = youtube == null && !track.isLocalTrack
+    return MediaItem.Builder().setMediaId(track.id)
+        .setUri(youtube ?: track.mediaUri?.let(Uri::parse) ?: Uri.parse(track.id))
+        .apply { if (youtube != null) setCustomCacheKey(YouTubeUris.cacheKey(track.id)) }
+        .apply { if (spotify) setMimeType(MimeTypes.APPLICATION_M3U8) }
+        .apply { if (!BuildConfig.NATIVE_RUNTIME && spotify) setDrmConfiguration(MediaItem.DrmConfiguration.Builder(C.WIDEVINE_UUID)
+            .setLicenseUri("https://spclient.wg.spotify.com/widevine-license/v1/audio/license")
+            .setMultiSession(true).setPlayClearContentWithoutKey(true).build()) }
+        .setMediaMetadata(MediaMetadata.Builder().setTitle(track.title).setArtist(track.subtitle)
+            .setArtworkUri(fr.spotifeur.data.largestSpotifyImage(track.imageUrl)?.let(Uri::parse)).setIsPlayable(true).setIsBrowsable(false)
+            .setExtras(Bundle().apply {
+                putInt("duration", track.durationMs); putInt("artwork", track.artwork)
+                putString("album", track.album); putString("mediaUri", track.mediaUri); putString("quality", track.quality)
+            }).build()).build()
+}
 private fun music(item: MediaItem) = musicOf(item)

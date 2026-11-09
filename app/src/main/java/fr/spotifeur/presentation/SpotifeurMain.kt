@@ -87,7 +87,9 @@ private data class DismissUndoBarSlice(val isVisible: Boolean = false, val durat
 fun SpotifeurMain(model: SpotifeurModel) {
     val discovery by model.discovery.collectAsStateWithLifecycle()
     val account by model.account.collectAsStateWithLifecycle()
-    if (!discovery.spotifyEnabled) {
+    val guest by model.guest.collectAsStateWithLifecycle()
+    // Signing in is optional: a guest uses local files, YouTube Music and multi-service playlists.
+    if (!discovery.spotifyEnabled && !guest) {
         if (account.restoring) {
             Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background))
         } else {
