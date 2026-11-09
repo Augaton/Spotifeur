@@ -1,71 +1,37 @@
-<div align="center">
-  <img src="docs/assets/img/icon.png" alt="Spotifeur logo" width="128" height="128">
-  <h1>Spotifeur</h1>
-  <p><strong>A music player for Android for Spotify, YouTube Music and local files.</strong></p>
-  <p>
-    Spotifeur plays your Spotify library with Spotify's own Android protocols and audio engine, the YouTube Music catalog without a Google account, and the audio files on your phone.
-    A Spotify account is optional. It has no podcasts, videos, Canvas loops or promoted content, a Material 3 Expressive interface, and more settings than the official app.
-  </p>
-</div>
+# Spotifeur
 
-<p align="center">
-  <a href="https://github.com/jean-voila/Spotifeur/actions/workflows/build.yml"><img alt="Build" src="https://img.shields.io/github/actions/workflow/status/jean-voila/Spotifeur/build.yml?branch=main&style=flat-square&label=build"></a>
-  <a href="https://github.com/jean-voila/Spotifeur/releases/latest"><img alt="Latest release" src="https://img.shields.io/github/v/release/jean-voila/Spotifeur?style=flat-square&label=release&color=10a37f"></a>
-  <a href="https://github.com/jean-voila/Spotifeur/releases/latest"><img alt="Download APK, total downloads" src="https://img.shields.io/github/downloads/jean-voila/Spotifeur/total?style=flat-square&label=Download%20APK&color=10a37f"></a>
-  <a href="LICENSE"><img alt="License" src="https://img.shields.io/badge/license-GPL--3.0-6b7280?style=flat-square"></a>
-  <img alt="Android 8.0+" src="https://img.shields.io/badge/Android-8.0%2B-3ddc84?style=flat-square&logo=android&logoColor=white">
-  <img alt="Kotlin" src="https://img.shields.io/badge/Kotlin-Jetpack%20Compose-7f52ff?style=flat-square&logo=kotlin&logoColor=white">
-</p>
+<p align="center"><img src="docs/assets/img/banner.png" alt="Spotifeur — open-source music player for Android for Spotify, YouTube Music and local files" width="1200"></p>
 
-<p align="center">
-  <a href="https://github.com/sponsors/jean-voila"><img alt="Support on GitHub Sponsors" src="https://img.shields.io/badge/GitHub%20Sponsors-Support%20the%20Project-EA4AAA?style=for-the-badge&logo=githubsponsors&logoColor=white"></a>
-  <br><br>
-  <a href="https://buymeacoffee.com/jean_voila"><img alt="Buy Me A Coffee" src="https://img.shields.io/badge/Buy%20Me%20A%20Coffee-Support%20the%20Project-FFDD00?style=for-the-badge&logo=buymeacoffee&logoColor=black"></a>
-</p>
-<p align="center">
-  <img src="https://komarev.com/ghpvc/?username=jean-voila-spotifeur&label=Views&color=gray&style=flat" alt="Views">
-</p>
+[Download APK](https://github.com/jean-voila/Spotifeur/releases/latest) · [Website](https://jean-voila.github.io/Spotifeur/) · [FAQ](docs/FAQ.md) · [Build from source](#build-and-contribute) · [Protocol notes](protocol/)
 
-<p align="center">
-  <a href="https://github.com/jean-voila/Spotifeur/releases/latest"><strong>Download APK</strong></a>
-  ·
-  <a href="https://jean-voila.github.io/Spotifeur/">Website</a>
-  ·
-  <a href="#build-from-source">Build from source</a>
-  ·
-  <a href="protocol/">Protocol notes</a>
-  ·
-  <a href="docs/FAQ.md">FAQ</a>
-  ·
-  <a href="docs/PRIVACY.md">Privacy</a>
-  ·
-  <a href="https://github.com/sponsors/jean-voila">Support</a>
-  ·
-  <a href="https://github.com/jean-voila/Spotifeur/issues">Issues</a>
-</p>
+[![CI](https://github.com/jean-voila/Spotifeur/actions/workflows/build.yml/badge.svg)](https://github.com/jean-voila/Spotifeur/actions/workflows/build.yml)
+[![Latest release](https://img.shields.io/github/v/release/jean-voila/Spotifeur?color=0f9d63)](https://github.com/jean-voila/Spotifeur/releases/latest)
+[![Downloads](https://img.shields.io/github/downloads/jean-voila/Spotifeur/total?color=0f9d63)](https://github.com/jean-voila/Spotifeur/releases/latest)
+[![License: GPL-3.0](https://img.shields.io/badge/license-GPL--3.0-0f9d63)](LICENSE)
+[![Android 8.0+](https://img.shields.io/badge/Android-8.0%2B-0f9d63)](#install-in-three-steps)
 
-## Preview
-
-<!-- Mockups to be added: home, player, lyrics, queue, album, playlist, playlist creation, settings. Sources in design/screens/. -->
-
-## Compared with the official app
-
-| | Official Spotify app | Spotifeur |
-| --- | --- | --- |
-| Your library, playlists, saved tracks, albums and artists | Yes | Yes, same account, synced both ways |
-| Full-length playback, seek, queue, shuffle, repeat | Yes | Yes, with Spotify's own audio engine |
-| Search, radios, lyrics, playlist recommendations | Yes | Yes |
-| Create and edit playlists, custom covers | Yes | Yes |
-| Offline downloads and audio cache | Yes | Yes, with an adjustable cache size and prefetch depth |
-| Podcasts, audiobooks, videos | Yes | No |
-| Canvas loops, promoted content, ads banners | Yes | No |
-| YouTube Music and local files, in the same playlists | No | Yes |
-| Use without a Spotify account | No | Yes, with YouTube Music and local files |
-| Themes, player styles, navigation bar, equalizer, gestures | Few options | Many options |
-
-Spotifeur uses the same services as the official Android app, so what you save, follow or edit in one shows up in the other.
+Spotifeur is an open-source **music player for Android**. It plays your Spotify
+library with Spotify's own Android protocols and audio engine, the YouTube Music
+catalog without a Google account, and audio files on your phone. A Spotify
+account is optional. The interface uses Material 3 Expressive and is available
+in English and French.
 
 ## Features
+
+- **Spotify, YouTube Music and local files.** Search, play and combine tracks in
+  playlists. Import playlist links or CSV files, and export playlists as CSV.
+- **Library and playlists.** Saved tracks, albums, artists and Spotify playlists
+  sync with your account. Create and edit playlists, including their covers.
+- **Player, queue and lyrics.** Seek, shuffle, repeat, sleep timer, synced lyrics,
+  a queue you can reorder and listening history across all three sources.
+- **Offline playback.** Download tracks, albums and playlists. Adjust the audio
+  cache size, prefetch depth and quality for Wi-Fi, mobile data and downloads.
+- **Appearance and controls.** Light and dark themes, album colors, player styles,
+  configurable home shelves, gestures and an equalizer.
+- **Music only.** No podcasts, audiobooks, videos, Canvas loops or promoted content.
+
+<details>
+<summary><b>All features and settings</b></summary>
 
 - **Home and library.** Pinned items, recently played tracks, downloads, liked songs, playlists, albums, artists and local files. Each home shelf can be shown or hidden, moved, and laid out as a row, a large row, a grid, a list or pills, with the number of items you choose. The buttons of album and playlist pages can be arranged as well, the others staying in a ⋮ menu. Pins are stored on the device only.
 - **Player.** Full-screen player with seek bar, queue, shuffle, repeat, sleep timer, and the codec and bitrate of the current track if you want them.
@@ -86,11 +52,49 @@ Spotifeur uses the same services as the official Android app, so what you save, 
 - **Cast.** Google Cast for local files.
 - **Backup.** Export and import your settings, pins and multi-service playlists.
 
-## Why
+</details>
 
-I was tired of paying for a service whose app is slow and keeps pushing podcasts, videos and other content I never asked for. I wanted the same music library in an app that only does music and that I can set up the way I like. It now also plays YouTube Music and the files on my phone, in the same playlists.
+### Compared with the official app
 
-## How it works
+| | Official Spotify app | Spotifeur |
+| --- | --- | --- |
+| Your library, playlists, saved tracks, albums and artists | Yes | Yes, same account, synced both ways |
+| Full-length playback, seek, queue, shuffle, repeat | Yes | Yes, with Spotify's own audio engine |
+| Search, radios, lyrics, playlist recommendations | Yes | Yes |
+| Create and edit playlists, custom covers | Yes | Yes |
+| Offline downloads and audio cache | Yes | Yes, with an adjustable cache size and prefetch depth |
+| Podcasts, audiobooks, videos | Yes | No |
+| Canvas loops, promoted content, ads banners | Yes | No |
+| YouTube Music and local files, in the same playlists | No | Yes |
+| Use without a Spotify account | No | Yes, with YouTube Music and local files |
+| Themes, player styles, navigation bar, equalizer, gestures | Few options | Many options |
+
+Spotifeur uses the same services as the official Android app, so what you save, follow or edit in one shows up in the other.
+
+## What it looks like
+
+![Spotifeur home screen, player, synced lyrics and queue in illustrated phone frames](docs/assets/img/preview-listening.png)
+
+![Spotifeur album page, playlist, settings and appearance options in illustrated phone frames](docs/assets/img/preview-library.png)
+
+These are screenshots from the app, also used on the website. The phone frames
+are illustrations. Editable artwork is in [`design/`](design/).
+
+## Install in three steps
+
+1. **Download.** Get `Spotifeur-vX.Y.Z.apk` from the
+   [latest release](https://github.com/jean-voila/Spotifeur/releases/latest) and
+   check its SHA-256 against the release notes.
+2. **Install.** Open the APK on an ARM64 phone with Android 8.0 or later.
+3. **Set up.** Sign in with your Spotify email address and the code Spotify sends
+   you, or continue without an account for YouTube Music and local files.
+
+See the [FAQ](docs/FAQ.md) for account, playback and installation details.
+
+## Technical details
+
+<details>
+<summary><b>Protocols and audio engine</b></summary>
 
 For Spotify, Spotifeur does not use the public Web API, App Remote, a WebView or the installed Spotify app. It talks to Spotify the way the official Android app does:
 
@@ -102,25 +106,35 @@ YouTube Music goes through the anonymous InnerTube requests of music.youtube.com
 
 Everything learned along the way is documented in [`protocol/`](protocol/), as a reference you can read without the code.
 
-## Is it safe?
+Spotify downloads stay encrypted and are processed by Spotify's engine at playback
+time. Connections go directly from the app to the services. The build uses the
+official Spotify APK you supply.
+
+</details>
+
+<details>
+<summary><b>Account and privacy</b></summary>
 
 - There is no Spotifeur server, no analytics and no tracking. The app talks to Spotify, to YouTube Music, and to [LRCLIB](https://lrclib.net) for lyrics Spotify does not have (title, artist, album and duration only; you can turn it off).
 - Your password is never stored. The email-code sign-in does not use one at all.
 - The session credential stays on your device, encrypted with Android Keystore.
 - Each release lists the SHA-256 of the APK and of its signing certificate. You can also build the APK yourself from this source and your own copy of the official Spotify APK.
 
-## What Spotifeur does not do
+</details>
 
-- Bypass Premium or play anything your account is not allowed to play.
-- Save decrypted audio. Downloads stay encrypted and are only processed by Spotify's engine at playback time.
-- Share accounts or proxy your traffic.
-- Download anything from Spotify at build time. To build it yourself, you provide the official APK.
+## Documentation
 
-## Install
+- [Protocol notes](protocol/): ClientToken, Login5, catalog, library, playlists, audio delivery, native engine, offline, Spotify Connect
+- [Native runtime](native-runtime/README.md)
+- [FAQ](docs/FAQ.md)
+- [Privacy](docs/PRIVACY.md)
+- [Contributing](CONTRIBUTING.md)
+- [Code of conduct](CODE_OF_CONDUCT.md)
+- [Security policy](SECURITY.md)
 
-Download `Spotifeur-vX.Y.Z.apk` from the [latest release](https://github.com/jean-voila/Spotifeur/releases/latest) and install it on an ARM64 phone with Android 8.0 or later. Check its SHA-256 against the release notes. Then open Spotifeur, enter your Spotify email address and type the code Spotify sends you, or continue without an account.
+## Build and contribute
 
-## Build from source
+<a id="build-from-source"></a>
 
 Requirements: JDK 21, Android SDK with platform 37, an ARM64 Android device (Android 8.0 or later), and the official Spotify Android **APKM, version 9.2.0.26** (build 148373686). The build checks the SHA-256 of the files it extracts and stops if they differ.
 
@@ -141,22 +155,18 @@ Without the APKM, `-PnativeRuntime=false` builds the app and runs the tests, but
 
 A build you make yourself is signed with your own key: uninstall a release build first (this erases the session and downloads).
 
-## Documentation
+See [contributing](CONTRIBUTING.md), [issues](https://github.com/jean-voila/Spotifeur/issues)
+and [security reporting](SECURITY.md). The [CI](.github/workflows/build.yml) builds
+the app without the native runtime and runs unit tests and lint.
 
-- [Protocol notes](protocol/): ClientToken, Login5, catalog, library, playlists, audio delivery, native engine, offline, Spotify Connect
-- [Native runtime](native-runtime/README.md)
-- [FAQ](docs/FAQ.md)
-- [Privacy](docs/PRIVACY.md)
-- [Contributing](CONTRIBUTING.md)
-- [Code of conduct](CODE_OF_CONDUCT.md)
-- [Security policy](SECURITY.md)
+## Support
 
-## Credits
+[GitHub Sponsors](https://github.com/sponsors/jean-voila) · [Buy me a coffee](https://buymeacoffee.com/jean_voila)
+
+## Credits and license
 
 - [librespot](https://github.com/librespot-org/librespot) for its public work on Spotify's protocols.
 - [Resona](https://github.com/code-saksham-hash/Resona) for its YouTube Music catalog and stream access.
 - [AndroidX Media3](https://github.com/androidx/media), [Jetpack Compose](https://developer.android.com/compose), [OkHttp](https://square.github.io/okhttp/), [Coil](https://coil-kt.github.io/coil/) and [LRCLIB](https://lrclib.net).
-
-## License
 
 [GNU General Public License v3.0](LICENSE).
