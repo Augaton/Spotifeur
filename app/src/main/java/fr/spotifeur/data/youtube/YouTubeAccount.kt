@@ -161,6 +161,22 @@ internal fun isYouTubeHome(url: String?): Boolean {
 
 private val YOUTUBE_HOSTS = setOf("youtube.com", "www.youtube.com", "m.youtube.com")
 
+/** What the sign-in screen does once a page has loaded. */
+internal enum class SignInStep { Wait, Finish, OpenMusic, Fail }
+
+/**
+ * The sign-in ends on YouTube Music with a session. When Google leaves it on YouTube's home page
+ * instead, YouTube Music is opened, at most twice so that a redirection back to the home page can
+ * never loop. Any other end on the home page is a failure the screen reports: the user is never left
+ * there without a word.
+ */
+internal fun signInStep(url: String?, signedIn: Boolean, musicRedirects: Int): SignInStep = when {
+    isYouTubeMusic(url) -> if (signedIn) SignInStep.Finish else SignInStep.Wait
+    !isYouTubeHome(url) -> SignInStep.Wait
+    signedIn && musicRedirects < 2 -> SignInStep.OpenMusic
+    else -> SignInStep.Fail
+}
+
 private fun httpsUri(url: String?): java.net.URI? =
     url?.let { runCatching { java.net.URI(it) }.getOrNull() }?.takeIf { it.scheme == "https" }
 

@@ -26,6 +26,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -39,9 +40,10 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavHostController
 import fr.spotifeur.R
 import fr.spotifeur.SpotifeurModel
-import fr.spotifeur.data.youtube.cookieValue
-import fr.spotifeur.data.youtube.isYouTubeHome
-import fr.spotifeur.data.youtube.isYouTubeMusic
+import fr.spotifeur.data.diagnostics.DiagnosticLog
+import fr.spotifeur.data.youtube.SignInStep
+import fr.spotifeur.data.youtube.YouTubeCredential
+import fr.spotifeur.data.youtube.signInStep
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
 import org.json.JSONObject
@@ -62,6 +64,8 @@ fun GoogleSignInScreen(model: SpotifeurModel, navController: NavHostController) 
     var checking by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf<String?>(null) }
     var webView by remember { mutableStateOf<WebView?>(null) }
+    // Openings of YouTube Music after Google left the sign-in on YouTube's home page. "Try again" resets them.
+    var musicRedirects by remember { mutableIntStateOf(0) }
     BackHandler { webView?.takeIf { it.canGoBack() && !checking }?.goBack() ?: navController.popBackStack() }
 
     fun finish(view: WebView, cookie: String) {
@@ -78,7 +82,7 @@ fun GoogleSignInScreen(model: SpotifeurModel, navController: NavHostController) 
                 catch (failure: Exception) {
                     error = failed
                     checking = false
-                    fr.spotifeur.data.diagnostics.DiagnosticLog.record("youtube-account", "sign-in ${failure.javaClass.simpleName} \"${failure.message}\"")
+                    DiagnosticLog.record("youtube-account", "sign-in ${failure.javaClass.simpleName} \"${failure.message}\"")
                 }
             }
         }
@@ -101,23 +105,28 @@ fun GoogleSignInScreen(model: SpotifeurModel, navController: NavHostController) 
             AndroidView(
                 modifier = Modifier.fillMaxSize(),
                 factory = { context ->
-                    var musicRedirects = 0
                     WebView(context).apply {
                         settings.javaScriptEnabled = true
                         settings.domStorageEnabled = true
                         CookieManager.getInstance().setAcceptCookie(true)
                         webViewClient = object : WebViewClient() {
                             override fun onPageFinished(view: WebView, url: String?) {
-                                val music = isYouTubeMusic(url)
-                                if (!music && !isYouTubeHome(url)) return
-                                val cookie = CookieManager.getInstance().getCookie(MUSIC_ORIGIN) ?: return
-                                if (cookieValue(cookie, "SAPISID") == null && cookieValue(cookie, "__Secure-3PAPISID") == null) return
-                                if (music) finish(view, cookie)
-                                // Signed in, but left on YouTube's home page: go on to YouTube Music. At most
-                                // twice, so that a redirection back to the home page can never loop.
-                                else if (musicRedirects++ < 2) {
-                                    fr.spotifeur.data.diagnostics.DiagnosticLog.record("youtube-account", "sign-in ended on YouTube's home page, opening YouTube Music")
-                                    view.loadUrl(MUSIC_ORIGIN)
+                                val cookie = CookieManager.getInstance().getCookie(MUSIC_ORIGIN).orEmpty()
+                                val signedIn = YouTubeCredential(cookie).sapisid != null
+                                // Only YouTube's home page is logged, without its query or fragment.
+                                val page = url?.substringBefore('?')?.substringBefore('#')
+                                when (signInStep(url, signedIn, musicRedirects)) {
+                                    SignInStep.Wait -> Unit
+                                    SignInStep.Finish -> finish(view, cookie)
+                                    SignInStep.OpenMusic -> {
+                                        musicRedirects++
+                                        DiagnosticLog.record("youtube-account", "sign-in ended on $page, opening YouTube Music")
+                                        view.loadUrl(MUSIC_ORIGIN)
+                                    }
+                                    SignInStep.Fail -> if (error == null) {
+                                        DiagnosticLog.record("youtube-account", "sign-in stopped on $page, session=$signedIn, YouTube Music opened $musicRedirects times")
+                                        error = failed
+                                    }
                                 }
                             }
                         }
@@ -126,7 +135,9 @@ fun GoogleSignInScreen(model: SpotifeurModel, navController: NavHostController) 
                         webView = this
                     }
                 },
-                onRelease = { it.stopLoading(); it.destroy() },
+                // The session is kept only in the encrypted credential: a sign-in left before its end
+                // leaves no Google cookie in the WebView.
+                onRelease = { it.stopLoading(); it.destroy(); CookieManager.getInstance().apply { removeAllCookies(null); flush() } },
             )
             if (checking) Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.surface) {
                 Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.Center, horizontalAlignment = Alignment.CenterHorizontally) {
@@ -141,7 +152,7 @@ fun GoogleSignInScreen(model: SpotifeurModel, navController: NavHostController) 
                 ) {
                     Column(Modifier.padding(16.dp)) {
                         Text(message, color = MaterialTheme.colorScheme.onErrorContainer)
-                        TextButton(onClick = { error = null; webView?.loadUrl(SIGN_IN_URL) }) { Text(stringResource(R.string.google_signin_retry)) }
+                        TextButton(onClick = { error = null; musicRedirects = 0; webView?.loadUrl(SIGN_IN_URL) }) { Text(stringResource(R.string.google_signin_retry)) }
                     }
                 }
             }
