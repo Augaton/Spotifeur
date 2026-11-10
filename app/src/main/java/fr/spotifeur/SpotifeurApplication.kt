@@ -10,6 +10,7 @@ import java.io.File
 class SpotifeurApplication : Application(), ImageLoaderFactory {
     override fun onCreate() {
         super.onCreate()
+        fr.spotifeur.data.diagnostics.DiagnosticLog.init(this)
         NetworkMonitor.start(this)
         fr.spotifeur.data.youtube.YouTubeMusic.init(this)
         fr.spotifeur.data.youtube.TrackMatcher.init(this)

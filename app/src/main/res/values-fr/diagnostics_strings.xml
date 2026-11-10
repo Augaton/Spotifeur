@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="diagnostics_title">Rapport de diagnostic</string>
+    <string name="diagnostics_subtitle">Erreurs récentes, à joindre à un signalement</string>
+    <string name="diagnostics_description">Le rapport indique les versions de l’app et d’Android, les droits de votre offre Spotify, la taille de la bibliothèque et les erreurs récentes. Il ne contient ni nom d’utilisateur, ni adresse e-mail, ni mot de passe, ni jeton, ni identifiant de titre ou de playlist. Reproduisez le problème, puis partagez le rapport.</string>
+    <string name="diagnostics_send_title">Partager le rapport</string>
+    <string name="diagnostics_send_subtitle">À coller dans une issue GitHub ou un message</string>
+    <string name="diagnostics_share_action">Partager</string>
+    <string name="diagnostics_copy_action">Copier</string>
+    <string name="diagnostics_copied">Rapport copié</string>
+    <string name="diagnostics_clear_title">Effacer les erreurs récentes</string>
+    <string name="diagnostics_clear_subtitle">Repartir d’une liste vide avant de reproduire un problème</string>
+    <string name="diagnostics_clear_action">Effacer</string>
+    <string name="diagnostics_loading">Préparation du rapport…</string>
+</resources>

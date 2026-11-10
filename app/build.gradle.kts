@@ -21,8 +21,8 @@ android {
         applicationId = providers.gradleProperty("spotifeurTestApplicationId").getOrElse("fr.spotifeur")
         minSdk = 26
         targetSdk = 36
-        versionCode = 18
-        versionName = "1.2.4"
+        versionCode = 19
+        versionName = "1.2.5"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         buildConfigField("boolean", "NATIVE_RUNTIME", nativeRuntime.toString())
         buildConfigField("boolean", "FORCE_OFFLINE", project.hasProperty("spotifeurNoInternet").toString())

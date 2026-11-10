@@ -32,8 +32,29 @@ class AccountAudioQualityTest {
         }
     }
 
-    @Test fun unknownGrantDoesNotInventAccountRestrictions() {
-        assertEquals(Long.MAX_VALUE, accountAudioBandwidth(null))
-        assertEquals(Long.MAX_VALUE, accountAudioBandwidth("future"))
+    @Test fun officialQualityValuesMapToVariants() {
+        // p.qzy0 in 9.2.0.26: "0" STANDARD, "1" VERY_HIGH, "2" LOSSLESS.
+        assertEquals(AudioQuality.NORMAL_BANDWIDTH, accountAudioBandwidth("0", "premium"))
+        assertEquals(Long.MAX_VALUE, accountAudioBandwidth("1", "free"))
+        assertEquals(Long.MAX_VALUE, accountAudioBandwidth("2", "premium"))
+    }
+
+    @Test fun unknownGrantKeepsHighQualityForPremiumOnly() {
+        assertEquals(Long.MAX_VALUE, accountAudioBandwidth(null, "premium"))
+        assertEquals(Long.MAX_VALUE, accountAudioBandwidth("future", "premium"))
+        assertEquals(AudioQuality.NORMAL_BANDWIDTH, accountAudioBandwidth(null, "free"))
+        assertEquals(AudioQuality.NORMAL_BANDWIDTH, accountAudioBandwidth(null, null))
+    }
+
+    @Test fun summaryReportsEntitlementsWithoutOtherValues() {
+        val summary = attributeSummary(mapOf("type" to "free", "audio-quality" to "0", "offline" to "false",
+            "player-license" to "opaque-license-value", "country" to "FR"))
+        assertTrue(summary.contains("type=free"))
+        assertTrue(summary.contains("audio-quality=0"))
+        assertTrue(summary.contains("offline=false"))
+        assertTrue(summary.contains("player-license=present"))
+        assertTrue(summary.contains("ads=absent"))
+        assertFalse(summary.contains("opaque"))
+        assertFalse(summary.contains("FR"))
     }
 }

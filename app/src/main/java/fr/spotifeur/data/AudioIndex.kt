@@ -212,3 +212,11 @@ internal fun variantUris(master: String): List<String> {
     val lines = master.lines()
     return lines.indices.filter { lines[it].startsWith("#EXT-X-STREAM-INF") && it + 1 < lines.size }.map { lines[it + 1].trim() }
 }
+
+/** Each variant of a master playlist with its declared bandwidth (0 when absent). */
+internal fun variantBandwidths(master: String): List<Pair<String, Long>> {
+    val lines = master.lines()
+    return lines.indices.filter { lines[it].startsWith("#EXT-X-STREAM-INF") && it + 1 < lines.size }.map { index ->
+        lines[index + 1].trim() to (Regex("(?:^|[:,])BANDWIDTH=(\\d+)").find(lines[index])?.groupValues?.get(1)?.toLongOrNull() ?: 0)
+    }
+}

@@ -29,6 +29,9 @@ internal object PlaybackDiagnostics : AnalyticsListener {
         val nativeCode = causes.filterIsInstance<NativeAudioException>().firstOrNull()?.nativeCode
         lastError = "$kind:${(error as? PlaybackException)?.errorCodeName.orEmpty()}:${causes.joinToString(">") { it.javaClass.simpleName }}:http=${status ?: 0}:native=${nativeCode ?: 0}"
         Log.w("SpotifeurAudio", lastError!!)
+        // Messages are Spotifeur's own for these types; others may carry addresses.
+        val reason = causes.lastOrNull { it is NativeAudioException || it is fr.spotifeur.data.SpotifyFailure }?.message
+        fr.spotifeur.data.diagnostics.DiagnosticLog.record("player", lastError + (reason?.let { " \"$it\"" } ?: ""))
     }
     override fun onPlayerError(eventTime: AnalyticsListener.EventTime, error: PlaybackException) = failure("player", error)
     override fun onAudioSinkError(eventTime: AnalyticsListener.EventTime, audioSinkError: Exception) = failure("sink", audioSinkError)

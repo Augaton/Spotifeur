@@ -22,7 +22,12 @@ internal class SpotifySession(
     private var userGrant: LoginGrant? = null
     private var stored: StoredCredential? = null
     private val audioPolicyLock = Mutex()
-    private var audioBandwidth: Long? = null
+    @Volatile private var audioBandwidth: Long? = null
+    @Volatile private var audioPolicyKey: String? = null
+    @Volatile private var audioPolicySignature: String? = null
+    /** Entitlements read with the audio policy, for the diagnostic report. */
+    @Volatile var lastAttributes: Map<String, String>? = null
+        private set
 
     /** Keep the user's quality preference, but select a file this account can prepare. */
     suspend fun maximumAudioBandwidth(): Long = audioPolicyLock.withLock {
@@ -31,15 +36,38 @@ internal class SpotifySession(
         val preferences = context.getSharedPreferences("spotify_audio_policy", Context.MODE_PRIVATE)
         val key = java.security.MessageDigest.getInstance("SHA-256").digest(account.toByteArray())
             .joinToString("") { "%02x".format(it.toInt() and 255) }
+        audioPolicyKey = key
         val known = preferences.getLong(key, Long.MAX_VALUE)
         if (!NetworkMonitor.online.value) return@withLock known
         try {
-            val limit = accountAudioBandwidth(spotifyAttribute(transport, this, "audio-quality"))
+            val attributes = spotifyAttributes(transport, this, "Audio policy")
+            lastAttributes = attributes
+            val signature = "${attributes["type"]}|${attributes["audio-quality"]}"
+            audioPolicySignature = signature
+            var limit = accountAudioBandwidth(attributes["audio-quality"], attributes["type"])
+            // A key refused for these same entitlements stays refused; a plan change clears it.
+            if (preferences.getString("$key:refusedFor", null) == signature) limit = minOf(limit, preferences.getLong("$key:refused", limit))
+            else preferences.edit().remove("$key:refused").remove("$key:refusedFor").apply()
             preferences.edit().putLong(key, limit).apply()
+            fr.spotifeur.data.diagnostics.DiagnosticLog.record("account", "${attributeSummary(attributes)} limit=${describeBandwidth(limit)}")
             audioBandwidth = limit
             limit
         } catch (auth: SpotifyAuthRequired) { throw auth }
-        catch (_: java.io.IOException) { known }
+        catch (failure: java.io.IOException) {
+            fr.spotifeur.data.diagnostics.DiagnosticLog.record("account", "attributes unavailable (${failure.message}) limit=${describeBandwidth(known)}")
+            known
+        }
+    }
+
+    /** The key service refused a file at this account's current limit: prepare lower variants from now on. */
+    fun restrictAudioBandwidth(limit: Long, status: Int) {
+        val current = audioBandwidth ?: Long.MAX_VALUE
+        if (limit >= current) return
+        audioBandwidth = limit
+        val key = audioPolicyKey ?: return
+        context.getSharedPreferences("spotify_audio_policy", Context.MODE_PRIVATE).edit().putLong(key, limit)
+            .putLong("$key:refused", limit).putString("$key:refusedFor", audioPolicySignature ?: "unknown").apply()
+        fr.spotifeur.data.diagnostics.DiagnosticLog.record("audio", "limit lowered to ${describeBandwidth(limit)} after key status=$status")
     }
 
     class Headers(val client: String, val user: String)
@@ -234,6 +262,8 @@ internal class SpotifySession(
         const val PROTOBUF = "application/x-protobuf"
     }
 }
+
+internal fun describeBandwidth(limit: Long): String = if (limit == Long.MAX_VALUE) "none" else "${limit / 1000}k"
 
 private fun decodeHex(text: String): ByteArray? {
     if (text.length % 2 != 0 || text.any { it.digitToIntOrNull(16) == null }) return null

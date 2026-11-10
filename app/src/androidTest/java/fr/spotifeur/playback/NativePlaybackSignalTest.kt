@@ -38,6 +38,10 @@ class NativePlaybackSignalTest {
                 spotifyAttribute(SpotifyAccount.transport, session, "type"))
         }
         assertEquals(2, tracks.size)
+        InstrumentationRegistry.getArguments().getString("spotifyAttributeOverrides")?.let { overrides ->
+            SpotifyNativeRuntime.attributeOverridesForTest = overrides.split(';').filter { '=' in it }
+                .associate { it.substringBefore('=') to it.substringAfter('=') }
+        }
         val activity = ins.startActivitySync(Intent(app, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
         val native = NativeAudioProvider(app)
         val http = SpotifyHlsDataSource.Factory(app, nativeAudio = true)

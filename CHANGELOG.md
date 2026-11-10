@@ -4,6 +4,19 @@
 
 Nothing yet.
 
+## v1.2.5
+
+### Fixed
+
+- Spotify Free accounts without the offline entitlement (`offline=false`, the usual Free plan) stopped after the clear lead-in, about 9 seconds into each track, then restarted in short bursts. The native engine's `Download` service, which provides Spotifeur's media handles, accepts the key and then fails the handle when that attribute is false. The engine session now always receives `offline=true`; the account's other attributes are passed unchanged. The new Free test account had an introductory trial with `offline=true`, `on-demand=true` and `ads=false`, which is why it played.
+- The playback retry counter no longer resets each time the player becomes ready. A track that fails after its lead-in is retried four times, then the error is shown, instead of stopping and restarting forever.
+- `audio-quality` follows the official values (`0` standard, `1` very high, `2` lossless). Without a known value, only Premium accounts select 256 kbit/s. A key refused by the service (HTTP 4xx) for a file above 128 kbit/s lowers that account's limit to 128 kbit/s until its plan attributes change.
+- HTTP 429 from Spotify is retried after `Retry-After` (at most 15 s for what the user opened). The background library sync waits out the limit, reads one metadata batch at a time, yields to foreground requests and pauses 1 s between pages. Large libraries no longer exhaust the request budget needed to open albums and playlists.
+
+### Added
+
+- Settings → Diagnostic report: app and Android versions, the account's entitlements (type, catalogue, audio quality, ads, on-demand, offline, shuffle, streaming flags), library sizes and the last 300 recorded events (HTTP statuses by operation, rate limits, key-service statuses with the variant bitrate, media-handle failures, player errors, catalog and library failures). It can be shared or copied and contains no username, e-mail address, token, URL or content identifier.
+
 ## v1.2.4
 
 ### Added

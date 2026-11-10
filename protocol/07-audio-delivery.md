@@ -76,6 +76,19 @@ not an APK without the Android INTERNET permission. Free-account library writes
 and the complete playlist lifecycle (including cover and recommendations) pass,
 with temporary favorites and playlists removed afterwards.
 
+**Static (9.2.0.26):** the official app reads `audio-quality` as a string mapped to the enum
+`p.qzy0`: `"0"` STANDARD, `"1"` VERY_HIGH, `"2"` LOSSLESS (`classes6.dex`, `p.wzy0` and `p.h5y0`).
+Spotifeur keeps 256 kbit/s for `1` and `2`, limits `0` to 128 kbit/s, and without a known value
+keeps 256 kbit/s only for `type=premium`. A 4xx from the key service for a file above 128 kbit/s
+lowers the account's limit at run time; the limit is kept until `type` or `audio-quality` change.
+
+**Live, 2026-11-10:** the body of `POST playplay/v1/key/{file_id}` sent by the engine for
+`GetMediaHandleId` has the top-level fields `1=5`, `2` (16 bytes), `4=1`, `5=1` and `6` (a Unix
+time in seconds). Read with librespot's `PlayPlayLicenseRequest` names, these are version, token,
+interactivity INTERACTIVE and content type AUDIO_TRACK: a streaming request, not a download.
+The `Download` service still depends on the `offline` attribute; see
+[08-native-engine.md](08-native-engine.md#credentials-and-http).
+
 ### Mode 1 is not enough
 
 **Live:** with the platform Widevine CDM, mode 1 plays the unencrypted lead-in (about 10 s), then the encrypted part decodes to invalid AAC frames that Android replaces with silence. Position, `PLAYING` state and buffer level all look normal. Only measuring the decoded PCM reveals the problem. Mode 4 with the native engine is the path that produces signal past the lead-in.

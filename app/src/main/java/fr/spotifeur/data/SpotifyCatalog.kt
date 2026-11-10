@@ -29,6 +29,8 @@ internal class SpotifyCatalog(
     private val musicCache = ConcurrentHashMap<String, Music>()
     private val metadataCache = ConcurrentHashMap<String, ByteArray>()
     private val requests = Semaphore(4)
+    /** Library sync reads one batch at a time, so a page the user opens is never queued behind it. */
+    private val backgroundRequests = Semaphore(1)
 
     /** Metadata already on the device, so only what is new gets requested. */
     fun seed(items: List<Music>) = items.forEach { if (it.title.isNotEmpty()) musicCache.putIfAbsent(it.id, it) }
@@ -36,8 +38,12 @@ internal class SpotifyCatalog(
     suspend fun hydrate(uris: List<String>): List<Music> = coroutineScope {
         val valid = uris.mapNotNull(::canonicalMusicUri)
         val missing = valid.distinct().filter { musicCache[it] == null }
+        val background = kotlin.coroutines.coroutineContext[BackgroundRequestsKey] != null
         missing.filter { metadataKind(it) != null }.chunked(40).map { chunk ->
-            async { requests.withPermit { fetchMetadata(chunk) } }
+            async {
+                if (background) backgroundRequests.withPermit { requests.withPermit { fetchMetadata(chunk) } }
+                else requests.withPermit { fetchMetadata(chunk) }
+            }
         }.awaitAll()
         // Keep playlist order and duplicate tracks. Unsupported entities never enter the music model.
         valid.mapNotNull(musicCache::get)

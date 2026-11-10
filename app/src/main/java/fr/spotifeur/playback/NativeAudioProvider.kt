@@ -94,13 +94,18 @@ internal class NativeAudioProvider(context: Context) : AutoCloseable {
                             item.handle.complete(result.handle)
                         }
                         MediaHandleResult.Failed, MediaHandleResult.Sunset -> {
+                            fr.spotifeur.data.diagnostics.DiagnosticLog.record("audio",
+                                "media handle ${result.toString().lowercase()} bitrate=${fr.spotifeur.data.AudioGrant.describe(item.fileId)}")
                             item.unavailable = true
                             item.handle.completeExceptionally(NativeAudioException("Spotify rejected audio preparation."))
                             executor.execute { item.subscription?.close() }
                         }
                         else -> Unit
                     }
-                }, { item.unavailable = true; item.handle.completeExceptionally(it) })
+                }, {
+                    fr.spotifeur.data.diagnostics.DiagnosticLog.record("audio", "media handle error=${it.javaClass.simpleName}")
+                    item.unavailable = true; item.handle.completeExceptionally(it)
+                })
             } catch (failure: Throwable) { item.handle.completeExceptionally(failure) }
         }
     }

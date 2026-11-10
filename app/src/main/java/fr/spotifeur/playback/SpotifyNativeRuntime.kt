@@ -75,6 +75,9 @@ internal class SpotifyNativeRuntime private constructor(private val engine: Any,
 
     companion object {
         private val poolLock = Mutex()
+        private const val OFFLINE_ATTRIBUTE = "offline"
+        /** Instrumented tests only: entitlements of another account type, given to the engine. */
+        @Volatile internal var attributeOverridesForTest: Map<String, String> = emptyMap()
         private var shared: SpotifyNativeRuntime? = null
         private var sharedSession: SpotifySession? = null
         // The native key loader must dispatch local envelope requests even without a network.
@@ -118,6 +121,8 @@ internal class SpotifyNativeRuntime private constructor(private val engine: Any,
             val entry = child.loadClass("probe.bootstrap.NativeEngine")
             entry.getMethod("load", String::class.java).invoke(null,
                 File(app.applicationInfo.nativeLibraryDir, "liborbit-jni-spotify.so").path)
+            child.loadClass("probe.bootstrap.SdkHttpFactory").getField("keyResponseListener")
+                .set(null, java.util.function.BiConsumer<String, Int> { file, status -> AudioGrant.onKeyResponse(file, status) })
             loader = child
             return entry
         }
@@ -139,13 +144,7 @@ internal class SpotifyNativeRuntime private constructor(private val engine: Any,
                     .header("Authorization", "Bearer ${headers.user}").header("client-token", headers.client)
                     .header("Accept", "application/x-protobuf").header("Spotify-App-Version", SpotifyAndroid.VERSION)
                     .header("X-Client-Id", SpotifyAndroid.CLIENT_ID).header("App-Platform", "Android").build(), "Native audio session")
-                val fetched = Proto(bytes).messages(1).mapNotNull { entry ->
-                    val name = entry.text(1) ?: return@mapNotNull null
-                    val value = entry.message(2) ?: return@mapNotNull null
-                    val text = value.text(4) ?: value.number(2)?.let { (it != 0).toString() }
-                        ?: value.number(3)?.toString() ?: return@mapNotNull null
-                    name to text
-                }.toMap()
+                val fetched = decodeAttributes(bytes)
                 file.writeText(org.json.JSONObject(fetched).toString())
                 fetched
             } catch (auth: SpotifyAuthRequired) { throw auth }
@@ -159,8 +158,14 @@ internal class SpotifyNativeRuntime private constructor(private val engine: Any,
                 runtime.references++
                 return@withLock runtime
             }
-            val attributes = sessionAttributes(app, session)
+            val account = sessionAttributes(app, session) + attributeOverridesForTest
+            // Live: with offline=false (Spotify Free without the new-account trial), the engine's
+            // Download service accepts the key, then the media handle fails when the first encrypted
+            // sample arrives, just after the clear lead-in. Its handles serve both streaming and
+            // downloads here, so it must always see the offline entitlement.
+            val attributes = account + (OFFLINE_ATTRIBUTE to "true")
             android.util.Log.i("SpotifeurNative", "Session attributes=${attributes.size} playerLicense=${attributes.containsKey("player-license")}")
+            fr.spotifeur.data.diagnostics.DiagnosticLog.record("audio", "engine session ${attributeSummary(account)}")
             val directory = File(app.noBackupFilesDir, "native-audio").apply { mkdirs() }
             val input = session.nativeInput(directory.path, attributes)
             val network = app.getSystemService(android.net.ConnectivityManager::class.java)

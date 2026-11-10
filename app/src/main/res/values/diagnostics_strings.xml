@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="diagnostics_title">Diagnostic report</string>
+    <string name="diagnostics_subtitle">Recent errors, to attach to a bug report</string>
+    <string name="diagnostics_description">The report lists the app and Android versions, your Spotify plan’s entitlements, library sizes and recent errors. It contains no username, e-mail address, password, token or track and playlist IDs. Reproduce the problem, then share the report.</string>
+    <string name="diagnostics_send_title">Share the report</string>
+    <string name="diagnostics_send_subtitle">Paste it into a GitHub issue or a message</string>
+    <string name="diagnostics_share_action">Share</string>
+    <string name="diagnostics_copy_action">Copy</string>
+    <string name="diagnostics_copied">Report copied</string>
+    <string name="diagnostics_clear_title">Clear recent errors</string>
+    <string name="diagnostics_clear_subtitle">Start from an empty list before reproducing a problem</string>
+    <string name="diagnostics_clear_action">Clear</string>
+    <string name="diagnostics_loading">Preparing the report…</string>
+</resources>

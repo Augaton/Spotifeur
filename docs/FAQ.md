@@ -2,7 +2,7 @@
 
 ## Do I need a Spotify account?
 
-No. Without an account, Spotifeur plays the YouTube Music catalog and the audio files on your phone, and Spotify tracks of imported playlists play from their closest YouTube Music match. With an account, it shows your Spotify library and plays what your account is allowed to play. Free and Premium accounts have been tested, including playlists and offline playback. The tested Free account supports AAC 128 kbit/s; Premium also supports AAC 256 kbit/s.
+No. Without an account, Spotifeur plays the YouTube Music catalog and the audio files on your phone, and Spotify tracks of imported playlists play from their closest YouTube Music match. With an account, it shows your Spotify library and plays what your account is allowed to play. Free and Premium accounts have been tested, including playlists and offline playback. Free accounts play AAC 128 kbit/s; Premium also plays AAC 256 kbit/s. If something fails with your account, Settings → Diagnostic report gives a text to attach to a bug report.
 
 ## Do I need the official Spotify app installed?
 

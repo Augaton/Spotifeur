@@ -13,6 +13,25 @@ import java.util.concurrent.atomic.AtomicBoolean;
 public final class SdkHttpFactory implements HttpConnectionFactory, AutoCloseable {
     /** Lets an instrumented test cut this engine off while keeping what it holds in memory. */
     public static volatile boolean offlineForTest;
+    /** Receives (file ID, HTTP status) for every key-service response; set by the app. */
+    public static volatile java.util.function.BiConsumer<String,Integer> keyResponseListener;
+    /** Top-level field numbers and varint values of a request body; length-delimited fields show only their size. */
+    private static String shape(byte[] body) {
+        if(body==null)return "none";
+        StringBuilder out=new StringBuilder();int i=0;
+        try {
+            while(i<body.length) {
+                long tag=0;int shift=0;byte b;do{b=body[i++];tag|=(long)(b&0x7f)<<shift;shift+=7;}while((b&0x80)!=0);
+                int field=(int)(tag>>>3),type=(int)(tag&7);
+                if(type==0){long v=0;shift=0;do{b=body[i++];v|=(long)(b&0x7f)<<shift;shift+=7;}while((b&0x80)!=0);out.append(field).append('=').append(v).append(' ');}
+                else if(type==2){long n=0;shift=0;do{b=body[i++];n|=(long)(b&0x7f)<<shift;shift+=7;}while((b&0x80)!=0);i+=(int)n;out.append(field).append(":len").append(n).append(' ');}
+                else if(type==5){i+=4;out.append(field).append(":fixed32 ");}
+                else if(type==1){i+=8;out.append(field).append(":fixed64 ");}
+                else return out.append("?").toString();
+            }
+        } catch(RuntimeException failure){out.append("truncated");}
+        return out.toString().trim();
+    }
     private final java.util.function.BiFunction<String,Boolean,Map<String,String>> apiHeaders;
     private final java.util.function.Function<String,byte[]> keyLoad;
     private final java.util.function.BiConsumer<String,byte[]> keySave;
@@ -139,6 +158,7 @@ public final class SdkHttpFactory implements HttpConnectionFactory, AutoCloseabl
                             return;
                         }
                         if(keyFile(url)!=null) {
+                            android.util.Log.i("SpotifeurNativeHttp","key request "+method+" body="+shape(body));
                             synchronized(mediaGate) {
                                 while(System.nanoTime()<nextMediaRequestNanos) {
                                     if(aborted.get())return;
@@ -195,6 +215,11 @@ public final class SdkHttpFactory implements HttpConnectionFactory, AutoCloseabl
                             authRetried=true;refreshAuth=true;connection.disconnect();continue;
                         }
                         String path=url.getPath();
+                        String keyed=keyFile(url);
+                        java.util.function.BiConsumer<String,Integer> listener=keyResponseListener;
+                        if(keyed!=null && listener!=null && status!=401) {
+                            try{listener.accept(keyed,status);}catch(RuntimeException ignored){}
+                        }
                         String category=path.contains("license")?"license":path.contains("sneaktables")?"manifest":path.contains("key")?"media-state":"service";
                         if(status>=400)android.util.Log.w("SpotifeurNativeHttp","response category="+category+" status="+status);
                         boolean redirect=status==301 || status==302 || status==303 || status==307 || status==308;

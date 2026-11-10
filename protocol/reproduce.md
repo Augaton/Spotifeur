@@ -95,6 +95,10 @@ adb shell am instrument -w -r -e spotifyAudioStress true -e spotifyAccountType f
   fr.spotifeur.freecheck.test/androidx.test.runner.AndroidJUnitRunner
 ```
 
+`-e spotifyAttributeOverrides 'offline=false;ads=true'` (quoted for the device shell)
+replaces attributes in the engine session only, to reproduce another plan's entitlements;
+`offline` is then forced back to `true` as in the app.
+
 These tests measure decoded PCM after the clear lead-in and seeks; the first also
 checks an automatic track transition. The quality test expects the requested level
 within the account's grant. `SpotifyEntitlementsDiagnosticTest` logs only a whitelist

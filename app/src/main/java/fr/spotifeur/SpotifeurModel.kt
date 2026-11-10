@@ -35,6 +35,7 @@ import fr.spotifeur.playback.SpotifyPlayer
 import fr.spotifeur.data.SessionVault
 import fr.spotifeur.data.Music
 import fr.spotifeur.data.SpotifyFailure
+import fr.spotifeur.data.BackgroundRequests
 import fr.spotifeur.data.SpotifySearch
 import fr.spotifeur.data.SpotifySession
 import fr.spotifeur.data.SpotifyTransport
@@ -316,11 +317,12 @@ class SpotifeurModel(private val app: Application) : AndroidViewModel(app) {
                 val result = source.load(previous) { installLibrary(it, true) }
                 installLibrary(result, false)
                 saveLibrary()
-                completeSavedTracks(source)
+                withContext(BackgroundRequests) { completeSavedTracks(source) }
                 keepCatalogAvailable()
             } catch (cancelled: CancellationException) { throw cancelled }
             catch (auth: SpotifyAuthRequired) { accountLost(auth) }
             catch (failure: Exception) {
+                fr.spotifeur.data.diagnostics.DiagnosticLog.record("library", "${failure.javaClass.simpleName} \"${readable(failure)}\"")
                 // What was last read stays on screen, without an error for what the connection prevented.
                 mutableLibrary.update { it.copy(loading = false, error = if (it.content == null) readable(failure) else null) }
             }
@@ -352,7 +354,7 @@ class SpotifeurModel(private val app: Application) : AndroidViewModel(app) {
     private fun keepCatalogAvailable() {
         val catalogSource = catalog ?: return
         offlineSyncJob?.cancel()
-        offlineSyncJob = viewModelScope.launch {
+        offlineSyncJob = viewModelScope.launch(BackgroundRequests) {
             val content = mutableLibrary.value.content ?: return@launch
             val pinned = pins.value.filter { it.id.startsWith("spotify:") && it.id != LIKED_SONGS && it.kind != MusicKind.Track }
             val items = (pinned + content.playlists + content.albums + content.artists).distinctBy(Music::id).take(MAX_BACKGROUND_PAGES)
@@ -500,6 +502,8 @@ class SpotifeurModel(private val app: Application) : AndroidViewModel(app) {
             catch (auth: SpotifyAuthRequired) { accountLost(auth) }
             catch (failure: Exception) {
                 val known = previous?.content
+                fr.spotifeur.data.diagnostics.DiagnosticLog.record("catalog",
+                    "${item.kind.name.lowercase()} page=${if (more) "next" else "first"} stored=${known != null} ${failure.javaClass.simpleName} \"${readable(failure)}\"")
                 // Known pages stay readable; only what cannot be shown at all is an error.
                 mutableDetails.update { it + (item.id to if (known != null) DetailUi(known) else DetailUi(error = readable(failure))) }
             }
@@ -850,7 +854,7 @@ class SpotifeurModel(private val app: Application) : AndroidViewModel(app) {
             online.value && (age > LIBRARY_TTL_MS || stored.playlists.any { it.ownerUsername == null }) -> refreshLibrary()
             online.value -> collections?.let { source ->
                 libraryJob = viewModelScope.launch {
-                    try { completeSavedTracks(source); keepCatalogAvailable() }
+                    try { withContext(BackgroundRequests) { completeSavedTracks(source) }; keepCatalogAvailable() }
                     catch (cancelled: CancellationException) { throw cancelled }
                     catch (auth: SpotifyAuthRequired) { accountLost(auth) }
                     catch (_: IOException) { /* The next connection completes it. */ }
@@ -898,6 +902,16 @@ class SpotifeurModel(private val app: Application) : AndroidViewModel(app) {
         mutableDiscovery.update { it.copy(spotifyEnabled = false) }
         search(discovery.value.query)
     }
+
+    /** A report for a bug ticket: entitlements, library sizes and recent failures, without identifiers. */
+    suspend fun diagnosticReport(): String {
+        val content = mutableLibrary.value.content
+        val sizes = content?.let {
+            "playlists=${it.playlists.size} albums=${it.albums.size} artists=${it.artists.size} savedTracks=${it.savedTrackCount}"
+        } ?: "not loaded"
+        return withContext(Dispatchers.IO) { fr.spotifeur.data.diagnostics.buildDiagnosticReport(app, sizes) }
+    }
+    fun clearDiagnostics() = fr.spotifeur.data.diagnostics.DiagnosticLog.clear()
 
     override fun onCleared() {
         spotifyPlaylists.close()
@@ -1036,7 +1050,8 @@ class SpotifeurModel(private val app: Application) : AndroidViewModel(app) {
         private const val PLAYLIST_TTL_MS = 12 * 60 * 60 * 1000L
         private const val ARTIST_TTL_MS = 7 * 24 * 60 * 60 * 1000L
         private const val ALBUM_TTL_MS = 30 * 24 * 60 * 60 * 1000L
-        private const val BACKGROUND_REQUEST_GAP_MS = 250L
+        /** Large libraries are read in the background for offline use; Spotify answers 429 to bursts. */
+        private const val BACKGROUND_REQUEST_GAP_MS = 1_000L
         private const val SAVE_EVERY_PAGES = 5
         private const val MAX_BACKGROUND_PAGES = 400
         private const val MAX_DETAIL_PAGES = 30

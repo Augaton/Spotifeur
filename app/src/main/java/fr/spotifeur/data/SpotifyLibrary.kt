@@ -146,6 +146,7 @@ internal class SpotifyLibrary(
     } catch (auth: SpotifyAuthRequired) {
         throw auth
     } catch (failure: IOException) {
+        fr.spotifeur.data.diagnostics.DiagnosticLog.record("library", "part ${failure.javaClass.simpleName} \"${failure.message}\"")
         Component(null, failure.message ?: "Part of the Spotify library is unavailable.")
     }
 }

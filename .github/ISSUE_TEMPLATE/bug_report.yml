@@ -117,6 +117,14 @@ body:
       required: true
 
   - type: textarea
+    id: diagnostics
+    attributes:
+      label: Diagnostic report
+      description: Reproduce the problem, then open Settings → Diagnostic report, tap Copy and paste the text here. It contains no username, e-mail address or token.
+      render: text
+    validations:
+      required: false
+  - type: textarea
     id: logs
     attributes:
       label: Screenshots or logs

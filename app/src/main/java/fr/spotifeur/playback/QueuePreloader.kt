@@ -254,6 +254,7 @@ internal class PlaybackRecovery(
 ) : Player.Listener, AutoCloseable {
     private val app = context.applicationContext
     private var attempts = 0
+    private var lastFailureAt = 0L
     private var retry: Job? = null
 
     fun start() {
@@ -265,12 +266,15 @@ internal class PlaybackRecovery(
         }
     }
 
-    override fun onPlaybackStateChanged(playbackState: Int) {
-        if (playbackState == Player.STATE_READY) attempts = 0
-    }
+    // READY alone does not reset the count: a track that fails after its clear lead-in becomes READY
+    // again at every retry, and would otherwise stop and restart forever.
+    override fun onMediaItemTransition(mediaItem: androidx.media3.common.MediaItem?, reason: Int) { attempts = 0 }
 
     override fun onPlayerError(error: PlaybackException) {
         retry?.cancel()
+        val now = android.os.SystemClock.elapsedRealtime()
+        if (now - lastFailureAt > STABLE_PLAYBACK_MS) attempts = 0
+        lastFailureAt = now
         if (!player.playWhenReady) return
         if (!NetworkMonitor.online.value) { skipToAvailable(); return }
         if (attempts >= MAX_ATTEMPTS || (!error.isConnectionFailure() && !error.hasNativePreparationFailure())) return
@@ -321,6 +325,7 @@ internal class PlaybackRecovery(
     private companion object {
         const val MAX_ATTEMPTS = 4
         const val RETRY_STEP_MS = 1_500L
+        const val STABLE_PLAYBACK_MS = 60_000L
     }
 }
 

@@ -141,7 +141,10 @@ internal class SpotifyHlsDataSource private constructor(
         internal fun master(track: String, masterUrl: String): String {
             val text = playlist(masterUrl)
             val base = masterUrl.toHttpUrl()
-            variantUris(text).forEach { variant -> base.resolve(variant)?.let { index.rememberPlaylistOwner(it.toString(), track) } }
+            variantBandwidths(text).forEach { (variant, bandwidth) -> base.resolve(variant)?.let {
+                index.rememberPlaylistOwner(it.toString(), track)
+                AudioGrant.rememberVariant(it.toString(), bandwidth)
+            } }
             val settings = fr.spotifeur.data.preferences.SettingsStore.get(app).settings.value
             val target = if (forDownloads) AudioQuality.of(settings.downloadQuality).bandwidth(metered = false)
                 else AudioQuality.of(if (metered()) settings.streamingQualityMobile else settings.streamingQualityWifi).bandwidth(metered())
@@ -173,6 +176,7 @@ internal class SpotifyHlsDataSource private constructor(
         private fun describeMedia(url: String, text: String, signed: Boolean) {
             val (file, address) = parseMediaPlaylist(text, url) ?: return
             index.attachFile(url, file)
+            AudioGrant.rememberFile(url, file.hex)
             val absolute = url.toHttpUrl().resolve(address)?.toString() ?: return
             if (signed) signedAddresses[file.hex] = absolute else signedAddresses.putIfAbsent(file.hex, absolute)
         }
@@ -182,7 +186,10 @@ internal class SpotifyHlsDataSource private constructor(
                 if (response.code == 401 && !retried) runBlocking {
                     val session = SpotifyAccount.require(app)
                     session.headers(API_HOST, session.headers(API_HOST))
-                } else if (!response.isSuccessful) throw SpotifyFailure("Spotify did not provide this audio stream.", response.code)
+                } else if (!response.isSuccessful) {
+                    fr.spotifeur.data.diagnostics.DiagnosticLog.record("audio", "playlist status=${response.code}")
+                    throw SpotifyFailure("Spotify did not provide this audio stream.", response.code)
+                }
                 else return response.body?.string() ?: throw SpotifyFailure("Spotify did not provide this audio stream.")
             }
             return fetch(url, retried = true)

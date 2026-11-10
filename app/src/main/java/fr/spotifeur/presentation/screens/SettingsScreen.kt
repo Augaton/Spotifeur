@@ -45,6 +45,7 @@ import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowRight
 import androidx.compose.material.icons.automirrored.rounded.Logout
 import androidx.compose.material.icons.rounded.Backup
+import androidx.compose.material.icons.rounded.BugReport
 import androidx.compose.material.icons.rounded.GraphicEq
 import androidx.compose.material.icons.rounded.MusicNote
 import androidx.compose.material.icons.rounded.Palette
@@ -176,6 +177,8 @@ fun SettingsScreen(model: SpotifeurModel, navController: NavHostController) {
         CategoryRow(stringResource(R.string.update_settings_title),
             stringResource(R.string.update_installed, fr.spotifeur.BuildConfig.VERSION_NAME),
             Icons.Rounded.Download) { fr.spotifeur.update.AppUpdater.get(context).check(manual = true) }
+        CategoryRow(stringResource(R.string.diagnostics_title), stringResource(R.string.diagnostics_subtitle),
+            Icons.Rounded.BugReport) { open("diagnostics") }
     }
 }
 
@@ -191,6 +194,7 @@ fun SettingsCategoryScreen(model: SpotifeurModel, navController: NavHostControll
         "account" -> AccountSettings(model, navController)
         "home" -> HomeSettings(model, navController)
         "pages" -> PageActionsSettings(model, navController)
+        "diagnostics" -> DiagnosticsSettings(model, navController)
     }
 }
 
@@ -448,6 +452,55 @@ private fun StorageSettings(model: SpotifeurModel, navController: NavHostControl
             primaryActionLabel = stringResource(R.string.common_clear),
             onPrimaryAction = { model.ui.removeAllDownloads() },
         )
+    }
+}
+
+@Composable
+private fun DiagnosticsSettings(model: SpotifeurModel, navController: NavHostController) {
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    var report by remember { mutableStateOf<String?>(null) }
+    var revision by remember { mutableLongStateOf(0L) }
+    LaunchedEffect(revision) { report = null; report = model.diagnosticReport() }
+    val copied = stringResource(R.string.diagnostics_copied)
+    val chooser = stringResource(R.string.diagnostics_share_action)
+    SettingsScaffold(stringResource(R.string.diagnostics_title), navController) {
+        Text(stringResource(R.string.diagnostics_description), style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(horizontal = 4.dp, vertical = 8.dp))
+        ActionSettingsItem(
+            title = stringResource(R.string.diagnostics_send_title),
+            subtitle = stringResource(R.string.diagnostics_send_subtitle),
+            icon = { Icon(Icons.Rounded.BugReport, null, tint = MaterialTheme.colorScheme.secondary) },
+            primaryActionLabel = stringResource(R.string.diagnostics_share_action),
+            onPrimaryAction = {
+                val text = report ?: return@ActionSettingsItem
+                val send = android.content.Intent(android.content.Intent.ACTION_SEND).setType("text/plain")
+                    .putExtra(android.content.Intent.EXTRA_SUBJECT, "Spotifeur diagnostic report")
+                    .putExtra(android.content.Intent.EXTRA_TEXT, text)
+                context.startActivity(android.content.Intent.createChooser(send, chooser))
+            },
+            secondaryActionLabel = stringResource(R.string.diagnostics_copy_action),
+            onSecondaryAction = {
+                val text = report ?: return@ActionSettingsItem
+                context.getSystemService(android.content.ClipboardManager::class.java)
+                    ?.setPrimaryClip(android.content.ClipData.newPlainText("Spotifeur diagnostic report", text))
+                Toast.makeText(context, copied, Toast.LENGTH_SHORT).show()
+            },
+            enabled = report != null,
+        )
+        ActionSettingsItem(
+            title = stringResource(R.string.diagnostics_clear_title),
+            subtitle = stringResource(R.string.diagnostics_clear_subtitle),
+            icon = { Icon(Icons.Rounded.Restore, null, tint = MaterialTheme.colorScheme.secondary) },
+            primaryActionLabel = stringResource(R.string.diagnostics_clear_action),
+            onPrimaryAction = { scope.launch { model.clearDiagnostics(); revision++ } },
+        )
+        Surface(color = MaterialTheme.colorScheme.surfaceContainer, modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(10.dp))) {
+            androidx.compose.foundation.text.selection.SelectionContainer {
+                Text(report ?: stringResource(R.string.diagnostics_loading), modifier = Modifier.padding(12.dp),
+                    style = MaterialTheme.typography.bodySmall, fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace)
+            }
+        }
     }
 }
 
