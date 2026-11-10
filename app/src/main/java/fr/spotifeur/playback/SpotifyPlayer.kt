@@ -17,8 +17,11 @@ import fr.spotifeur.data.Music
 import fr.spotifeur.data.MusicKind
 import fr.spotifeur.data.SpotifyFailure
 import fr.spotifeur.data.isLocalTrack
+import fr.spotifeur.data.spreadRecommendations
 import fr.spotifeur.BuildConfig
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -51,7 +54,12 @@ private object ShuffleMemory {
 }
 
 @androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
-class SpotifyPlayer(context: Context, scope: CoroutineScope) : AutoCloseable {
+class SpotifyPlayer(
+    context: Context,
+    private val scope: CoroutineScope,
+    /** Smart shuffle: the tracks to mix into a shuffled context, none when it does not apply. */
+    private val recommend: (suspend (List<Music>) -> List<Music>)? = null,
+) : AutoCloseable {
     private val appContext = context.applicationContext
     private val mutableState = MutableStateFlow(Playback())
     val state = mutableState.asStateFlow()
@@ -79,6 +87,7 @@ class SpotifyPlayer(context: Context, scope: CoroutineScope) : AutoCloseable {
      */
     private var before: List<Music> = emptyList()
     private var after: List<Music> = emptyList()
+    private var mixJob: Job? = null
     init {
         ShuffleMemory.load(appContext)
         future.addListener({
@@ -100,9 +109,38 @@ class SpotifyPlayer(context: Context, scope: CoroutineScope) : AutoCloseable {
         val start = if (ShuffleMemory.enabled) 0 else first
         mutableState.value = Playback(window(tracks, start).first, start - windowStart(start), buffering = true,
             durationMs = selected.durationMs, shuffle = ShuffleMemory.enabled, canNext = start < tracks.lastIndex)
+        mixLater(tracks)
         if (controller == null) { pending = tracks to start; return }
         load(tracks, start)
     }
+    /**
+     * Smart shuffle: asks for recommendations in the background, then spreads them over the tracks
+     * still to come. A new context, a shuffle toggle or a stop cancels the search, so its result never
+     * lands in another queue. A failed search leaves the plain shuffle.
+     */
+    private fun mixLater(context: List<Music>) {
+        mixJob?.cancel()
+        val source = recommend ?: return
+        if (!ShuffleMemory.enabled || context.isEmpty()) return
+        mixJob = scope.launch {
+            val picks = try { source(context) }
+            catch (cancelled: CancellationException) { throw cancelled }
+            catch (failure: Exception) { android.util.Log.w("SpotifeurShuffle", "Smart shuffle unavailable: ${failure.message}"); return@launch }
+            mix(picks)
+        }
+    }
+    /** The current item stays, so its audio keeps playing; the user's queue stays right after it. */
+    private fun mix(picks: List<Music>) { controller?.let { player ->
+        val valid = picks.filter(Music::isPlayableTrack)
+        if (valid.isEmpty() || !ShuffleMemory.enabled || player.mediaItemCount == 0) return
+        val queued = userQueue(player)
+        val window = (0 until player.mediaItemCount).map { music(player.getMediaItemAt(it)) }
+        val local = player.currentMediaItemIndex
+        val later = spreadRecommendations(window.drop(local + 1 + queued.size) + after, valid)
+        replaceAroundCurrent(player, before + window.take(local), later, queued)
+        queueChanged = true
+        update(player)
+    } }
     private fun windowStart(start: Int) = (start - WINDOW_BEHIND).coerceAtLeast(0)
     /** The part of [tracks] the player holds when [start] plays, and what stays out before and after it. */
     private fun window(tracks: List<Music>, start: Int): Triple<List<Music>, List<Music>, List<Music>> {
@@ -205,9 +243,16 @@ class SpotifyPlayer(context: Context, scope: CoroutineScope) : AutoCloseable {
                 ShuffleMemory.original = null
                 val position = original.indexOfFirst { it.id == items.getOrNull(current)?.id }
                 if (position >= 0) replaceAroundCurrent(player, original.take(position), original.drop(position + 1), queued)
+                else {
+                    // A recommended track plays: the context resumes after the last of its own tracks that played.
+                    val ids = original.map(Music::id)
+                    val last = items.take(current).lastOrNull { it.id in ids }?.let { ids.indexOf(it.id) } ?: -1
+                    replaceAroundCurrent(player, original.take(last + 1), original.drop(last + 1), queued)
+                }
             }
         }
         queueChanged = true
+        mixLater(items)
         update(player)
     } }
     /** The current item is never removed, so its audio keeps playing while the queue changes around it. */
@@ -224,6 +269,7 @@ class SpotifyPlayer(context: Context, scope: CoroutineScope) : AutoCloseable {
     }
     fun repeat() { controller?.let { it.repeatMode = (it.repeatMode + 1) % 3 } }
     fun stop() {
+        mixJob?.cancel()
         pending = null; ShuffleMemory.original = null
         queueChanged = true
         before = emptyList(); after = emptyList()

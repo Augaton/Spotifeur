@@ -2,7 +2,9 @@
 
 ## Unreleased
 
-Nothing yet.
+### Added
+
+- Smart shuffle (Settings, off by default, with a Spotify account). While shuffle is on, up to 10 tracks from related artists are spread over the queue, at most one every three tracks. The 8 artists that appear most in the context are the seeds; an artist qualifies when at least two of them list it as related (`Artist.related`, field 15), and each qualifying artist gets one track, drawn from a random album or single (fields 5 and 6) rather than its top tracks. Tracks of the context and saved tracks are left out. The search reads Extended Metadata only, in five batched requests at most, and never Radio, Autoplay or the playlist recommendation service, where Discovery Mode boosts tracks in exchange for a lower royalty rate. A new context, a shuffle toggle or a stop cancels it; turning shuffle off removes the recommendations.
 
 ## v1.3.0
 

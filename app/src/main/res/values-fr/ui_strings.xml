@@ -313,6 +313,8 @@
     <string name="settings_show_queue_history_title">Afficher l\'historique de la file</string>
     <string name="settings_show_scrollbar_subtitle">Afficher la barre de défilement latérale sur les listes de musique pour un défilement rapide</string>
     <string name="settings_show_scrollbar_title">Afficher la barre de défilement</string>
+    <string name="settings_smart_shuffle_subtitle">En lecture aléatoire, ajoute des titres d\'artistes proches de ceux que vous écoutez, sans placement payant. Nécessite un compte Spotify.</string>
+    <string name="settings_smart_shuffle_title">Lecture aléatoire intelligente</string>
     <string name="settings_smooth_corners_subtitle">Utilise des formes d\'angles complexes pour une meilleure esthétique, mais peut affecter les performances sur les appareils bas de gamme</string>
     <string name="settings_smooth_corners_title">Utiliser des angles lisses</string>
     <string name="settings_tap_bg_closes_subtitle">Appuyez sur l\'arrière-plan flou pour fermer la feuille du lecteur.</string>
