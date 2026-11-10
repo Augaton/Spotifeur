@@ -117,7 +117,8 @@ fun SpotifeurMain(model: SpotifeurModel) {
     val currentRoute = navBackStackEntry?.destination?.route
     var isSearchBarActive by remember { mutableStateOf(false) }
     val routesWithHiddenNavigationBar = remember {
-        setOf(Screen.Settings.route, Screen.Equalizer.route, Screen.SettingsCategory.route, Screen.PlaylistDetail.route, Screen.AlbumDetail.route, Screen.ArtistDetail.route)
+        setOf(Screen.Settings.route, Screen.Equalizer.route, Screen.SettingsCategory.route, Screen.PlaylistDetail.route, Screen.AlbumDetail.route,
+            Screen.ArtistDetail.route, Screen.Convert.route, Screen.GoogleSignIn.route)
     }
     val shouldHideNavigationBar by remember(currentRoute, isSearchBarActive) {
         derivedStateOf {

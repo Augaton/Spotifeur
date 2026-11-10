@@ -19,6 +19,7 @@ internal class CatalogStore(context: Context) {
     fun loadDetail(id: String): CatalogDetail? = read(detailFile(id))?.let(::decodeDetail)
     fun saveDetail(id: String, detail: CatalogDetail) = write(detailFile(id), encodeDetail(detail))
     fun detailAgeMs(id: String): Long = age(detailFile(id))
+    fun removeDetail(id: String) { detailFile(id).delete() }
 
     fun sizeBytes(): Long = root.walkTopDown().filter(File::isFile).sumOf(File::length)
     fun clear() { root.deleteRecursively() }

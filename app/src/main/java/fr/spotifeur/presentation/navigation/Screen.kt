@@ -11,6 +11,10 @@ sealed class Screen(val route: String) {
     object Settings : Screen("settings")
     object Equalizer : Screen("equalizer")
     object History : Screen("history")
+    object GoogleSignIn : Screen("google_sign_in")
+    object Convert : Screen("convert/{playlistId}/{target}") {
+        fun createRoute(playlistId: String, target: String) = "convert/${URLEncoder.encode(playlistId, "UTF-8")}/$target"
+    }
     object SettingsCategory : Screen("settings_category/{categoryId}") {
         fun createRoute(categoryId: String) = "settings_category/$categoryId"
     }

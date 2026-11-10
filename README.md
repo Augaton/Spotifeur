@@ -12,7 +12,7 @@
 
 Spotifeur is an open-source **music player for Android**. It plays your Spotify
 library with Spotify's own Android protocols and audio engine, the YouTube Music
-catalog without a Google account, and audio files on your phone. A Spotify
+catalog with or without a Google account, and audio files on your phone. A Spotify
 account is optional. The interface uses Material 3 Expressive and is available
 in English and French.
 
@@ -52,8 +52,10 @@ are illustrations. Editable artwork is in [`design/`](design/).
 - **Lyrics.** Synced lyrics from Spotify, with an immersive mode. When Spotify has none, Spotifeur can look them up on LRCLIB.
 - **Queue.** Reorder by dragging, swipe to remove, optional history of played tracks.
 - **Playlists.** Create a playlist on your Spotify account, rename it, set a cover from your photos, publish it on your profile, add Spotify's recommendations and remove tracks. Multi-service playlists are stored on the device, take a cover from your photos and can mix Spotify, YouTube Music and local tracks, with a badge showing each track's source. Local files can be added to Spotify playlists as Spotify's own local file references, and Spotify playlists that refer to local files play them from the phone's storage. Long-press a playlist to delete it.
+- **Converter.** Convert a playlist between Spotify, YouTube Music and multi-service playlists, in every direction (playlist page → ⋮ → Convert to…). Matches on the destination appear as they are found, uncertain ones are highlighted, and each track can be replaced by another search result or left out before the new playlist is created.
 - **Import and export.** Export a playlist as CSV, and import a CSV exported by Spotifeur or a YouTube, YouTube Music or Spotify playlist link.
 - **YouTube Music.** Search and play the YouTube Music catalog without a Google account, with the same downloads, cache, queue and playlists as Spotify tracks. Without a Spotify account, Spotify tracks play from their closest YouTube Music match (title, artist, album and duration).
+- **Google account.** Connect a Google account in Settings → Accounts to see your YouTube Music playlists in the library, create playlists on the account, rename them, make them public or private, add and remove tracks, and delete them. Audio still plays without the account.
 - **Albums and artists.** Album pages, artist pages with top tracks, albums and related artists, and radios based on a track, an album, an artist or a playlist.
 - **Swipe on tracks.** Swiping a track right adds it to the queue. Each direction can be set to add to the queue, play next, save to Liked songs, remove from the playlist, or nothing.
 - **Search.** Tracks, albums, artists and playlists on Spotify, tracks on YouTube Music, with paging.
@@ -79,6 +81,8 @@ are illustrations. Editable artwork is in [`design/`](design/).
 | Podcasts, audiobooks, videos | Yes | No |
 | Canvas loops, promoted content, ads banners | Yes | No |
 | YouTube Music and local files, in the same playlists | No | Yes |
+| YouTube Music playlists of a Google account | No | Yes |
+| Convert playlists between Spotify and YouTube Music | No | Yes |
 | Use without a Spotify account | No | Yes, with YouTube Music and local files |
 | Themes, player styles, navigation bar, equalizer, gestures | Few options | Many options |
 
@@ -106,7 +110,7 @@ For Spotify, Spotifeur does not use the public Web API, App Remote, a WebView or
 - **Library and catalog** through Playlist4, Collection v2, Extended Metadata and the search service.
 - **Audio** through HLS manifests processed by Spotify's own native engine, loaded unchanged from the official APK you supply at build time.
 
-YouTube Music goes through the anonymous InnerTube requests of music.youtube.com for search and playlists, and through the player endpoint for audio streams, read in byte ranges. This part is adapted from [Resona](https://github.com/code-saksham-hash/Resona). Without a Spotify account, a Spotify playlist link is read from Spotify's public embed page, which lists its first 100 tracks.
+YouTube Music goes through the anonymous InnerTube requests of music.youtube.com for search and playlists, and through the player endpoint for audio streams, read in byte ranges. With a Google account, the library and playlist edits use the same InnerTube requests as the music.youtube.com web client, with the cookies left by Google's sign-in page and its `SAPISIDHASH` authorization; audio requests stay anonymous. This part is adapted from [Resona](https://github.com/code-saksham-hash/Resona). Without a Spotify account, a Spotify playlist link is read from Spotify's public embed page, which lists its first 100 tracks.
 
 Everything learned along the way is documented in [`protocol/`](protocol/), as a reference you can read without the code.
 
@@ -122,6 +126,7 @@ official Spotify APK you supply.
 - There is no Spotifeur server, no analytics and no tracking. The app talks to Spotify, to YouTube Music, and to [LRCLIB](https://lrclib.net) for lyrics Spotify does not have (title, artist, album and duration only; you can turn it off).
 - Your password is never stored. The email-code sign-in does not use one at all.
 - The session credential stays on your device, encrypted with Android Keystore.
+- A Google account is signed in on Google's own page. Spotifeur keeps the cookies it leaves, encrypted with Android Keystore, and only sends them to music.youtube.com.
 - Each release lists the SHA-256 of the APK and of its signing certificate. You can also build the APK yourself from this source and your own copy of the official Spotify APK.
 
 </details>

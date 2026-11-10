@@ -39,6 +39,14 @@ import fr.spotifeur.data.BackgroundRequests
 import fr.spotifeur.data.SpotifySearch
 import fr.spotifeur.data.SpotifySession
 import fr.spotifeur.data.SpotifyTransport
+import fr.spotifeur.data.youtube.YTM_PLAYLIST_PREFIX
+import fr.spotifeur.data.youtube.YouTubeAccount
+import fr.spotifeur.data.youtube.YouTubeAccountInfo
+import fr.spotifeur.data.youtube.YouTubeAccountPlaylist
+import fr.spotifeur.data.youtube.YouTubeAuthRequired
+import fr.spotifeur.data.youtube.YouTubeFailure
+import fr.spotifeur.data.youtube.YouTubeLibrary
+import fr.spotifeur.data.youtube.youTubeVideoId
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
@@ -180,6 +188,229 @@ class SpotifeurModel(private val app: Application) : AndroidViewModel(app) {
     private val mutableMessage = MutableStateFlow<String?>(null)
     val message = mutableMessage.asStateFlow()
 
+    // YouTube Music account ----------------------------------------------------------------------
+
+    val youTubeAccount = YouTubeAccount.info
+    private val mutableYouTubePlaylists = MutableStateFlow(decodePins(preferences.getString(KEY_YOUTUBE_PLAYLISTS, null)))
+    /** The Google account's YouTube Music playlists, as last read; kept on the device between starts. */
+    val youTubePlaylists = mutableYouTubePlaylists.asStateFlow()
+    private val mutableYouTubeLoading = MutableStateFlow(false)
+    val youTubeLoading = mutableYouTubeLoading.asStateFlow()
+    private val mutableYouTubeEditable = MutableStateFlow(preferences.getStringSet(KEY_YOUTUBE_EDITABLE, null).orEmpty().toSet())
+    /** Playlists whose page showed the owner's editing header. */
+    val youTubeEditable = mutableYouTubeEditable.asStateFlow()
+    /** Row identifiers of the account's playlists as last read, to remove one row. Main thread only. */
+    private val youTubeRows = HashMap<String, YouTubeAccountPlaylist>()
+    private var youTubeJob: Job? = null
+
+    /** Checks the cookies of Google's sign-in page, keeps them, then reads the library. */
+    suspend fun connectGoogle(cookie: String, visitorData: String?, dataSyncId: String?): YouTubeAccountInfo {
+        val info = withContext(Dispatchers.IO) { YouTubeAccount.connect(cookie, visitorData, dataSyncId) }
+        // The cookies are now kept encrypted: the WebView's own copy is removed.
+        runCatching { android.webkit.CookieManager.getInstance().apply { removeAllCookies(null); flush() } }
+        refreshYouTubeLibrary()
+        return info
+    }
+
+    /** Forgets the Google account on this device. Its playlists stay on YouTube Music. */
+    fun disconnectGoogle() {
+        youTubeJob?.cancel()
+        YouTubeAccount.clear()
+        runCatching { android.webkit.CookieManager.getInstance().apply { removeAllCookies(null); flush() } }
+        val ids = mutableYouTubePlaylists.value.map(Music::id).toSet()
+        ids.forEach { detailJobs.remove(it)?.cancel() }
+        mutableYouTubePlaylists.value = emptyList()
+        mutableYouTubeEditable.value = emptySet()
+        youTubeRows.clear()
+        preferences.edit { remove(KEY_YOUTUBE_PLAYLISTS); remove(KEY_YOUTUBE_EDITABLE) }
+        mutableDetails.update { it - ids }
+        // Pages read with the account (private playlists included) do not stay on the device.
+        viewModelScope.launch(Dispatchers.IO) { ids.forEach(store::removeDetail) }
+    }
+
+    private fun youTubeAccountLost(failure: YouTubeAuthRequired) {
+        disconnectGoogle()
+        mutableMessage.value = app.getString(fr.spotifeur.R.string.google_session_closed)
+        fr.spotifeur.data.diagnostics.DiagnosticLog.record("youtube-account", "signed out: ${failure.message}")
+    }
+
+    fun refreshYouTubeLibrary() {
+        if (!YouTubeAccount.signedIn || !online.value || youTubeJob?.isActive == true) return
+        youTubeJob = viewModelScope.launch {
+            mutableYouTubeLoading.value = true
+            try {
+                val playlists = withContext(Dispatchers.IO) { YouTubeLibrary.libraryPlaylists() }
+                installYouTubePlaylists(playlists)
+            } catch (cancelled: CancellationException) { throw cancelled }
+            catch (auth: YouTubeAuthRequired) { youTubeAccountLost(auth) }
+            catch (failure: Exception) {
+                fr.spotifeur.data.diagnostics.DiagnosticLog.record("youtube-library", "${failure.javaClass.simpleName} \"${failure.message}\"")
+            } finally { mutableYouTubeLoading.value = false }
+        }
+    }
+
+    private fun installYouTubePlaylists(playlists: List<Music>) {
+        // A playlist without a cover of its own shows the covers of its tracks, once its page is known.
+        val shown = playlists.map { playlist ->
+            if (playlist.imageUrl != null) playlist
+            else mutableDetails.value[playlist.id]?.content?.item?.imageUrl?.let { playlist.copy(imageUrl = it) } ?: playlist
+        }
+        shown.forEach { ui.register(it) }
+        mutableYouTubePlaylists.value = shown
+        preferences.edit { putString(KEY_YOUTUBE_PLAYLISTS, encodePins(shown)) }
+    }
+
+    private fun markYouTubeEditable(id: String, editable: Boolean) {
+        val next = if (editable) mutableYouTubeEditable.value + id else mutableYouTubeEditable.value - id
+        if (next == mutableYouTubeEditable.value) return
+        mutableYouTubeEditable.value = next
+        preferences.edit { putStringSet(KEY_YOUTUBE_EDITABLE, next) }
+    }
+
+    /** Whether the signed-in account can change this YouTube Music playlist. */
+    fun youTubePlaylistOwned(item: Music): Boolean {
+        if (!item.id.startsWith(YTM_PLAYLIST_PREFIX) || youTubeAccount.value == null) return false
+        if (item.id in youTubeEditable.value) return true
+        val listed = mutableYouTubePlaylists.value.firstOrNull { it.id == item.id } ?: item
+        return item.id != YTM_PLAYLIST_PREFIX + "LM" && listed.ownerUsername != null && listed.ownerUsername == youTubeAccount.value?.name
+    }
+
+    /** Reads a YouTube Music playlist: with the account when there is one (private playlists, row ids), anonymously otherwise. */
+    private suspend fun fetchYouTubePlaylist(item: Music): CatalogDetail {
+        val id = item.id.removePrefix(YTM_PLAYLIST_PREFIX)
+        val (title, image, tracks) = if (YouTubeAccount.signedIn) {
+            val playlist = withContext(Dispatchers.IO) { YouTubeLibrary.playlist(id) }
+            youTubeRows[item.id] = playlist
+            markYouTubeEditable(item.id, playlist.editable)
+            Triple(playlist.title, playlist.imageUrl, playlist.tracks)
+        } else {
+            val playlist = withContext(Dispatchers.IO) { fr.spotifeur.data.youtube.YouTubeMusic.playlist(id) }
+            Triple(playlist.title, playlist.imageUrl, playlist.tracks)
+        }
+        val music = item.copy(title = title.ifBlank { item.title }, subtitle = fr.spotifeur.utils.formatSongCount(tracks.size),
+            imageUrl = image ?: playlistMosaic(tracks) ?: item.imageUrl, tracks = tracks.map(Music::id))
+        val detail = CatalogDetail(music, tracks, total = tracks.size)
+        installYouTubeDetail(detail)
+        return detail
+    }
+
+    private suspend fun installYouTubeDetail(detail: CatalogDetail) {
+        val item = detail.item
+        ui.register(item)
+        mutableDetails.update { it + (item.id to DetailUi(detail)) }
+        withContext(Dispatchers.IO) { store.saveDetail(item.id, detail) }
+        val listed = mutableYouTubePlaylists.value
+        if (listed.any { it.id == item.id }) installYouTubePlaylists(listed.map {
+            if (it.id == item.id) it.copy(title = item.title, imageUrl = it.imageUrl ?: item.imageUrl) else it
+        })
+    }
+
+    private fun loadYouTubePlaylist(item: Music, refresh: Boolean) {
+        val shown = mutableDetails.value[item.id]
+        if (!refresh && shown?.content != null && shown.error == null) return
+        if (shown?.loading == true && !refresh) return
+        detailJobs[item.id]?.cancel()
+        detailJobs[item.id] = viewModelScope.launch {
+            var known = shown?.content
+            if (known == null) known = withContext(Dispatchers.IO) { store.loadDetail(item.id) }
+            mutableDetails.update { it + (item.id to DetailUi(known, loading = online.value)) }
+            if (!online.value) {
+                if (known == null) mutableDetails.update { it + (item.id to DetailUi(error = app.getString(fr.spotifeur.R.string.youtube_playlist_failed))) }
+                return@launch
+            }
+            try { fetchYouTubePlaylist(item) }
+            catch (cancelled: CancellationException) { throw cancelled }
+            catch (auth: YouTubeAuthRequired) { youTubeAccountLost(auth); mutableDetails.update { it + (item.id to DetailUi(known)) } }
+            catch (failure: Exception) {
+                fr.spotifeur.data.diagnostics.DiagnosticLog.record("youtube-playlist", "${failure.javaClass.simpleName} \"${failure.message}\"")
+                mutableDetails.update { it + (item.id to if (known != null) DetailUi(known)
+                    else DetailUi(error = app.getString(fr.spotifeur.R.string.youtube_playlist_failed))) }
+            }
+        }
+    }
+
+    private suspend fun youTubeTracks(item: Music): List<Music> {
+        mutableDetails.value[item.id]?.content?.takeIf { it.nextPage == null }?.let { return it.tracks }
+        if (online.value) try { return fetchYouTubePlaylist(item).tracks }
+        catch (cancelled: CancellationException) { throw cancelled }
+        catch (auth: YouTubeAuthRequired) { youTubeAccountLost(auth) }
+        catch (_: IOException) { /* What the device has is used. */ }
+        return withContext(Dispatchers.IO) { store.loadDetail(item.id) }?.tracks.orEmpty()
+    }
+
+    /** Creates a playlist on the Google account. Only YouTube Music tracks go in. */
+    internal suspend fun createYouTubePlaylist(name: String, tracks: List<Music>, public: Boolean): Music {
+        val kept = tracks.filter { it.youTubeVideoId != null }
+        val id = try {
+            withContext(Dispatchers.IO) {
+                YouTubeLibrary.create(name, kept.mapNotNull { it.youTubeVideoId }, if (public) YouTubeLibrary.PUBLIC else YouTubeLibrary.PRIVATE)
+            }
+        } catch (auth: YouTubeAuthRequired) { youTubeAccountLost(auth); throw auth }
+        val created = Music(YTM_PLAYLIST_PREFIX + id, name.trim(), fr.spotifeur.utils.formatSongCount(kept.size), MusicKind.Playlist,
+            imageUrl = playlistMosaic(kept) ?: kept.firstNotNullOfOrNull(Music::imageUrl), tracks = kept.map(Music::id),
+            ownerUsername = youTubeAccount.value?.name)
+        markYouTubeEditable(created.id, true)
+        installYouTubePlaylists(listOf(created) + mutableYouTubePlaylists.value.filterNot { it.id == created.id })
+        installYouTubeDetail(CatalogDetail(created, kept))
+        return created
+    }
+
+    internal suspend fun addYouTubePlaylistTracks(playlist: Music, tracks: List<Music>) {
+        val kept = tracks.filter { it.youTubeVideoId != null }
+        if (kept.isEmpty()) throw IllegalArgumentException(app.getString(fr.spotifeur.R.string.youtube_playlist_only_youtube))
+        try { withContext(Dispatchers.IO) { YouTubeLibrary.add(playlist.id, kept.mapNotNull { it.youTubeVideoId }) } }
+        catch (auth: YouTubeAuthRequired) { youTubeAccountLost(auth); throw auth }
+        detailJobs.remove(playlist.id)?.cancel()
+        // New rows have ids only the page knows: the next removal reads it again.
+        youTubeRows.remove(playlist.id)
+        val content = mutableDetails.value[playlist.id]?.content ?: CatalogDetail(playlist, emptyList())
+        val tracksNow = content.tracks + kept
+        installYouTubeDetail(content.copy(item = content.item.copy(subtitle = fr.spotifeur.utils.formatSongCount(tracksNow.size),
+            imageUrl = content.item.imageUrl ?: playlistMosaic(tracksNow)), tracks = tracksNow, total = tracksNow.size))
+    }
+
+    /** Removes the row at [index] of the playlist as shown; other copies of the same track stay. */
+    internal suspend fun removeYouTubePlaylistTrack(playlist: Music, index: Int) {
+        val content = mutableDetails.value[playlist.id]?.content ?: return
+        val track = content.tracks.getOrNull(index) ?: return
+        val videoId = track.youTubeVideoId ?: return
+        val occurrence = content.tracks.take(index).count { it.id == track.id }
+        fun rowOf(rows: YouTubeAccountPlaylist) = rows.tracks.withIndex().filter { it.value.id == track.id }.getOrNull(occurrence)?.index
+        try {
+            var rows = youTubeRows[playlist.id]?.takeIf { it.tracks.map(Music::id) == content.tracks.map(Music::id) }
+            if (rows == null) rows = withContext(Dispatchers.IO) { YouTubeLibrary.playlist(playlist.id) }
+            val row = rowOf(rows) ?: throw YouTubeFailure(app.getString(fr.spotifeur.R.string.youtube_playlist_row_gone))
+            val setVideoId = rows.setVideoIds[row] ?: throw YouTubeFailure(app.getString(fr.spotifeur.R.string.youtube_playlist_row_gone))
+            withContext(Dispatchers.IO) { YouTubeLibrary.remove(playlist.id, videoId, setVideoId) }
+            detailJobs.remove(playlist.id)?.cancel()
+            val remaining = rows.copy(tracks = rows.tracks.filterIndexed { i, _ -> i != row },
+                setVideoIds = rows.setVideoIds.filterIndexed { i, _ -> i != row })
+            youTubeRows[playlist.id] = remaining
+            val item = content.item.copy(subtitle = fr.spotifeur.utils.formatSongCount(remaining.tracks.size), tracks = remaining.tracks.map(Music::id))
+            installYouTubeDetail(content.copy(item = item, tracks = remaining.tracks, total = remaining.tracks.size))
+        } catch (auth: YouTubeAuthRequired) { youTubeAccountLost(auth); throw auth }
+    }
+
+    /** Whether the playlist is public, read from its page. */
+    internal suspend fun youTubePlaylistPublic(playlist: Music): Boolean {
+        val rows = youTubeRows[playlist.id] ?: withContext(Dispatchers.IO) { YouTubeLibrary.playlist(playlist.id) }.also { youTubeRows[playlist.id] = it }
+        return rows.privacy == YouTubeLibrary.PUBLIC
+    }
+
+    internal suspend fun editYouTubePlaylist(playlist: Music, name: String, public: Boolean) {
+        try {
+            withContext(Dispatchers.IO) {
+                if (name.trim() != playlist.title) YouTubeLibrary.rename(playlist.id, name)
+                YouTubeLibrary.setPrivacy(playlist.id, if (public) YouTubeLibrary.PUBLIC else YouTubeLibrary.PRIVATE)
+            }
+        } catch (auth: YouTubeAuthRequired) { youTubeAccountLost(auth); throw auth }
+        youTubeRows[playlist.id]?.let { youTubeRows[playlist.id] = it.copy(title = name.trim(), privacy = if (public) YouTubeLibrary.PUBLIC else YouTubeLibrary.PRIVATE) }
+        val renamed = playlist.copy(title = name.trim())
+        ui.register(renamed)
+        installYouTubePlaylists(mutableYouTubePlaylists.value.map { if (it.id == playlist.id) it.copy(title = renamed.title) else it })
+        mutableDetails.value[playlist.id]?.content?.let { installYouTubeDetail(it.copy(item = it.item.copy(title = renamed.title))) }
+    }
+
     init {
         if (mutableGuest.value) mutableLibrary.value = LibraryUi(emptyLibrary())
         viewModelScope.launch {
@@ -190,6 +421,7 @@ class SpotifeurModel(private val app: Application) : AndroidViewModel(app) {
             }
         }
         refreshLocalTracks()
+        refreshYouTubeLibrary()
         viewModelScope.launch {
             // One history entry each time a queue position starts playing.
             var counted: String? = null
@@ -209,6 +441,7 @@ class SpotifeurModel(private val app: Application) : AndroidViewModel(app) {
         viewModelScope.launch {
             var wasOnline = online.value
             online.collect { now ->
+                if (now && !wasOnline) refreshYouTubeLibrary()
                 if (now && !wasOnline && collections != null) {
                     sendPendingFavorites()
                     val age = withContext(Dispatchers.IO) { store.libraryAgeMs() }
@@ -307,6 +540,7 @@ class SpotifeurModel(private val app: Application) : AndroidViewModel(app) {
     }
 
     fun refreshLibrary() {
+        refreshYouTubeLibrary()
         val source = collections ?: return
         if (!online.value && mutableLibrary.value.content != null) return
         libraryJob?.cancel()
@@ -453,6 +687,7 @@ class SpotifeurModel(private val app: Application) : AndroidViewModel(app) {
     }
     fun loadDetail(item: Music, refresh: Boolean = false, more: Boolean = false) {
         if (item.isLocalPlaylist) { installLocalPlaylist(item.id); return }
+        if (item.id.startsWith(YTM_PLAYLIST_PREFIX)) { loadYouTubePlaylist(item, refresh || more); return }
         val source = catalog ?: return
         val shown = mutableDetails.value[item.id]
         if (!more && !refresh && shown?.content != null && shown.error == null) return
@@ -620,6 +855,7 @@ class SpotifeurModel(private val app: Application) : AndroidViewModel(app) {
             mutableLibrary.value.content?.savedTracks.orEmpty()
         }
         item.isLocalPlaylist -> withLocalFiles(localPlaylistStore.get(item.id)?.tracks.orEmpty())
+        item.id.startsWith(YTM_PLAYLIST_PREFIX) -> youTubeTracks(item)
         item.isLocalTrack || item.kind == MusicKind.Track -> withLocalFiles(listOf(item))
         else -> {
             val known = detailForActions(item) ?: return emptyList()
@@ -970,6 +1206,7 @@ class SpotifeurModel(private val app: Application) : AndroidViewModel(app) {
             mutableDetails.update { it - item.id }
             return
         }
+        if (item.id.startsWith(YTM_PLAYLIST_PREFIX)) { deleteYouTubePlaylist(item); return }
         if (item.kind != MusicKind.Playlist || item.id == LIKED_SONGS || !item.id.startsWith("spotify:playlist:")) return
         viewModelScope.launch {
             try {
@@ -985,6 +1222,98 @@ class SpotifeurModel(private val app: Application) : AndroidViewModel(app) {
             } catch (cancelled: CancellationException) { throw cancelled }
             catch (auth: SpotifyAuthRequired) { accountLost(auth) }
             catch (failure: Exception) { mutableMessage.value = (failure as? SpotifyFailure)?.message ?: readable(failure) }
+        }
+    }
+
+    // Converter ----------------------------------------------------------------------------------
+
+    private val mutableConversion = MutableStateFlow<fr.spotifeur.data.PlaylistConversion?>(null)
+    /** The conversion shown by the converter, kept while its screen is open. */
+    val conversion = mutableConversion.asStateFlow()
+
+    /** Kinds a playlist can be converted to now: Spotify needs its account, YouTube Music a Google account. */
+    fun conversionTargets(source: Music): Map<fr.spotifeur.data.PlaylistKind, Boolean> {
+        val from = fr.spotifeur.data.playlistKindOf(source) ?: return emptyMap()
+        return fr.spotifeur.data.PlaylistKind.entries.filter { it != from }.associateWith { kind ->
+            when (kind) {
+                fr.spotifeur.data.PlaylistKind.Spotify -> remote != null
+                fr.spotifeur.data.PlaylistKind.YouTubeMusic -> YouTubeAccount.signedIn
+                fr.spotifeur.data.PlaylistKind.MultiService -> true
+            }
+        }
+    }
+
+    fun startConversion(source: Music, target: fr.spotifeur.data.PlaylistKind) {
+        val current = mutableConversion.value
+        if (current != null && current.source.id == source.id && current.target == target && current.state.value.created == null) return
+        current?.cancel()
+        val conversion = fr.spotifeur.data.PlaylistConversion(
+            scope = viewModelScope, source = source, target = target,
+            loadTracks = { tracksOf(source) },
+            search = conversionSearch(target),
+            // A device file can stay in a Spotify playlist as Spotify's own local file reference.
+            fallback = { track -> track.takeIf { target == fr.spotifeur.data.PlaylistKind.Spotify && it.id.startsWith(fr.spotifeur.data.LOCAL_TRACK_PREFIX) } },
+            parallelism = if (target == fr.spotifeur.data.PlaylistKind.Spotify) 2 else 3,
+        )
+        mutableConversion.value = conversion
+        conversion.start()
+    }
+
+    fun endConversion() {
+        mutableConversion.value?.cancel()
+        mutableConversion.value = null
+    }
+
+    private fun conversionSearch(target: fr.spotifeur.data.PlaylistKind) = fr.spotifeur.data.MatchSearch { track ->
+        val text = fr.spotifeur.data.ConversionMatching.searchText(track)
+        when (target) {
+            fr.spotifeur.data.PlaylistKind.Spotify -> {
+                val search = remote ?: throw SpotifyFailure("Sign in to Spotify first.")
+                val locale = app.resources.configuration.locales.get(0) ?: Locale.getDefault()
+                search.search(text, locale, null).items.filter { it.kind == MusicKind.Track }
+            }
+            fr.spotifeur.data.PlaylistKind.YouTubeMusic -> withContext(Dispatchers.IO) {
+                // Songs first; videos only when no song is close, as for playback without a Spotify account.
+                val songs = fr.spotifeur.data.youtube.YouTubeMusic.searchSongs(text)
+                val best = fr.spotifeur.data.ConversionMatching.rank(track, songs).firstOrNull()?.second ?: 0.0
+                if (best >= fr.spotifeur.data.ConversionMatching.CONFIDENT) songs
+                else songs + runCatching { fr.spotifeur.data.youtube.YouTubeMusic.searchVideos(text) }.getOrDefault(emptyList())
+            }
+            fr.spotifeur.data.PlaylistKind.MultiService -> emptyList()
+        }
+    }
+
+    /** Creates the converted playlist in its destination. */
+    internal suspend fun createConverted(target: fr.spotifeur.data.PlaylistKind, name: String, tracks: List<Music>): Music = when (target) {
+        fr.spotifeur.data.PlaylistKind.MultiService -> localPlaylistStore.create(name, tracks).asMusic().also { ui.register(it) }
+        fr.spotifeur.data.PlaylistKind.YouTubeMusic -> createYouTubePlaylist(name, tracks, public = false)
+        fr.spotifeur.data.PlaylistKind.Spotify -> {
+            // One creation request stays small; the rest is added in batches.
+            val created = createSpotifyPlaylist(name, tracks.take(100), published = false)
+            if (tracks.size > 100) addSpotifyPlaylistTracks(created, tracks.drop(100))
+            created
+        }
+    }
+
+    /** The account's own playlist is deleted; a saved one only leaves the library. */
+    @androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
+    private fun deleteYouTubePlaylist(item: Music) {
+        if (!YouTubeAccount.signedIn) return
+        val owned = youTubePlaylistOwned(item)
+        viewModelScope.launch {
+            try {
+                withContext(Dispatchers.IO) { if (owned) YouTubeLibrary.delete(item.id) else YouTubeLibrary.removeFromLibrary(item.id) }
+                installYouTubePlaylists(mutableYouTubePlaylists.value.filterNot { it.id == item.id })
+                markYouTubeEditable(item.id, false)
+                youTubeRows.remove(item.id)
+                pinnedStore.pins.value.firstOrNull { it.id == item.id }?.let(pinnedStore::toggle)
+                fr.spotifeur.playback.DownloadCenter.remove(app, item.id)
+                mutableDetails.update { it - item.id }
+                withContext(Dispatchers.IO) { store.removeDetail(item.id) }
+                mutableMessage.value = app.getString(fr.spotifeur.R.string.playlist_deleted, item.title)
+            } catch (cancelled: CancellationException) { throw cancelled }
+            catch (auth: YouTubeAuthRequired) { youTubeAccountLost(auth) }
+            catch (failure: Exception) { mutableMessage.value = failure.message ?: app.getString(fr.spotifeur.R.string.youtube_playlist_failed) }
         }
     }
 
@@ -1045,6 +1374,8 @@ class SpotifeurModel(private val app: Application) : AndroidViewModel(app) {
         private const val KEY_PENDING_LIKES = "pending_likes"
         private const val KEY_PLAYLIST_COVERS = "playlist_covers"
         private const val KEY_PENDING_UNLIKES = "pending_unlikes"
+        private const val KEY_YOUTUBE_PLAYLISTS = "youtube_playlists"
+        private const val KEY_YOUTUBE_EDITABLE = "youtube_editable"
         private const val FAVORITE_LAG_MS = 2 * 60 * 1000L
         private const val LIBRARY_TTL_MS = 10 * 60 * 1000L
         private const val PLAYLIST_TTL_MS = 12 * 60 * 60 * 1000L

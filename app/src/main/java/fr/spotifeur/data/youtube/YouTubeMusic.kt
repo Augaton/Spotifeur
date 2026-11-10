@@ -252,10 +252,10 @@ object YouTubeMusic {
 
     private const val KEY_VISITOR = "visitor"
     private const val MUSIC_API_KEY = "AIzaSyC9XL3ZjWddXya6X74dJoCTL-WEYFDNX30"
-    private const val MUSIC_CLIENT_VERSION = "1.20250101.01.00"
+    internal const val MUSIC_CLIENT_VERSION = "1.20250101.01.00"
     private const val SONGS_FILTER = "EgWKAQIIAWoKEAoQAxAEEAkQBQ%3D%3D"
     private const val VIDEOS_FILTER = "EgWKAQIQAWoKEAoQAxAEEAkQBQ%3D%3D"
-    private const val BROWSER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+    internal const val BROWSER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
     private const val STREAM_MARGIN_MS = 10 * 60 * 1000L
     private const val DEFAULT_LIFETIME_MS = 5 * 60 * 60 * 1000L
     private const val MAX_PLAYLIST_TRACKS = 5000
@@ -366,7 +366,7 @@ internal fun playlistTitle(response: JSONObject): String? {
     return title
 }
 
-private fun playlistImage(response: JSONObject): String? {
+internal fun playlistImage(response: JSONObject): String? {
     var image: String? = null
     walkJson(response) { node ->
         if (image != null) return@walkJson

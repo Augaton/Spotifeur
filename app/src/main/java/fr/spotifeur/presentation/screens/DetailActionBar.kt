@@ -120,5 +120,6 @@ internal fun actionName(action: DetailAction): String = stringResource(when (act
     DetailAction.REORDER -> R.string.reorder
     DetailAction.EDIT -> R.string.detail_edit
     DetailAction.EXPORT -> R.string.playlist_export_csv
+    DetailAction.CONVERT -> R.string.convert_to
     DetailAction.DELETE -> R.string.playlist_delete
 })

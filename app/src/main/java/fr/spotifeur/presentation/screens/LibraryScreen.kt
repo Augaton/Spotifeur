@@ -155,6 +155,8 @@ fun LibraryScreen(model: SpotifeurModel, navController: NavHostController, paddi
     var showSortSheet by remember { mutableStateOf(false) }
     var creatingPlaylist by remember { mutableStateOf(false) }
     val localPlaylists by model.localPlaylists.collectAsStateWithLifecycle()
+    val youTubePlaylists by model.youTubePlaylists.collectAsStateWithLifecycle()
+    val youTubeLoading by model.youTubeLoading.collectAsStateWithLifecycle()
     val localTracks by model.localTracks.collectAsStateWithLifecycle()
     val localTitle = stringResource(R.string.library_tab_local)
     val downloads by ui.downloads.collectAsStateWithLifecycle()
@@ -305,7 +307,7 @@ fun LibraryScreen(model: SpotifeurModel, navController: NavHostController, paddi
                         val content = library.content
                         val bottomPadding = paddingValues.calculateBottomPadding() + MiniPlayerHeight + 24.dp
                         PullToRefreshBox(
-                            isRefreshing = library.loading && content != null,
+                            isRefreshing = (library.loading || youTubeLoading) && content != null,
                             onRefresh = model::refreshLibrary,
                             modifier = Modifier.fillMaxSize(),
                         ) {
@@ -319,7 +321,7 @@ fun LibraryScreen(model: SpotifeurModel, navController: NavHostController, paddi
                             } else {
                                 HorizontalPager(state = pagerState, modifier = Modifier.fillMaxSize()) { page ->
                                     when (libraryTabs[page]) {
-                                        LibraryTabId.PLAYLISTS -> PlaylistsTab((localPlaylists.map { it.asMusic() } + content.playlists).sortedFor(sortOf(LibraryTabId.PLAYLISTS)), bottomPadding, open, pin)
+                                        LibraryTabId.PLAYLISTS -> PlaylistsTab((localPlaylists.map { it.asMusic() } + youTubePlaylists + content.playlists).sortedFor(sortOf(LibraryTabId.PLAYLISTS)), bottomPadding, open, pin)
                                         LibraryTabId.LIKED -> LikedTab(model, ui, navController, content, bottomPadding)
                                         LibraryTabId.ALBUMS -> AlbumsTab(content.albums.sortedFor(sortOf(LibraryTabId.ALBUMS)), albumsAsList, ui, bottomPadding, open, pin)
                                         LibraryTabId.ARTISTS -> ArtistsTab(content.artists.sortedFor(sortOf(LibraryTabId.ARTISTS)), bottomPadding, open, pin)

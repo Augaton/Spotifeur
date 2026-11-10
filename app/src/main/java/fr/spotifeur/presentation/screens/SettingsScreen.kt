@@ -170,8 +170,11 @@ fun SettingsScreen(model: SpotifeurModel, navController: NavHostController) {
         CategoryRow(stringResource(R.string.settings_storage_title), stringResource(R.string.settings_storage_subtitle), Icons.Rounded.Storage) { open("storage") }
         CategoryRow(stringResource(R.string.settings_category_backup_title), stringResource(R.string.settings_category_backup_subtitle), Icons.Rounded.Backup) { open("backup") }
         val discovery by model.discovery.collectAsStateWithLifecycle()
-        CategoryRow(stringResource(R.string.settings_account_title),
-            stringResource(if (discovery.spotifyEnabled) R.string.settings_account_subtitle else R.string.settings_account_guest_subtitle),
+        val google by model.youTubeAccount.collectAsStateWithLifecycle()
+        CategoryRow(stringResource(R.string.settings_accounts_title),
+            listOfNotNull(stringResource(R.string.search_source_spotify).takeIf { discovery.spotifyEnabled },
+                stringResource(R.string.search_source_youtube).takeIf { google != null })
+                .joinToString(" · ").ifEmpty { stringResource(R.string.settings_account_guest_subtitle) },
             Icons.AutoMirrored.Rounded.Logout) { open("account") }
         val context = LocalContext.current
         CategoryRow(stringResource(R.string.update_settings_title),
@@ -550,18 +553,45 @@ private fun BackupSettings(model: SpotifeurModel, navController: NavHostControll
 @Composable
 private fun AccountSettings(model: SpotifeurModel, navController: NavHostController) {
     val discovery by model.discovery.collectAsStateWithLifecycle()
-    SettingsScaffold(stringResource(R.string.settings_account_title), navController) {
-        if (!discovery.spotifyEnabled) SettingsItem(
-            title = stringResource(R.string.settings_account_signin_title),
-            subtitle = stringResource(R.string.settings_account_signin_subtitle),
-            leadingIcon = { Icon(Icons.Rounded.MusicNote, null, tint = MaterialTheme.colorScheme.secondary) },
-            onClick = { model.showSignIn() },
-        ) else SettingsItem(
-            title = stringResource(R.string.settings_logout_title),
-            subtitle = stringResource(R.string.settings_logout_subtitle),
-            leadingIcon = { Icon(Icons.AutoMirrored.Rounded.Logout, null, tint = MaterialTheme.colorScheme.error) },
-            onClick = { model.disconnectSpotify() },
-        )
+    val google by model.youTubeAccount.collectAsStateWithLifecycle()
+    SettingsScaffold(stringResource(R.string.settings_accounts_title), navController) {
+        SettingsSection(title = stringResource(R.string.search_source_spotify), icon = {}) {
+            if (!discovery.spotifyEnabled) SettingsItem(
+                title = stringResource(R.string.settings_account_signin_title),
+                subtitle = stringResource(R.string.settings_account_signin_subtitle),
+                leadingIcon = { Icon(Icons.Rounded.MusicNote, null, tint = MaterialTheme.colorScheme.secondary) },
+                onClick = { model.showSignIn() },
+            ) else SettingsItem(
+                title = stringResource(R.string.settings_logout_title),
+                subtitle = stringResource(R.string.settings_logout_subtitle),
+                leadingIcon = { Icon(Icons.AutoMirrored.Rounded.Logout, null, tint = MaterialTheme.colorScheme.error) },
+                onClick = { model.disconnectSpotify() },
+            )
+        }
+        SettingsSection(title = stringResource(R.string.search_source_youtube), icon = {}) {
+            val account = google
+            if (account == null) SettingsItem(
+                title = stringResource(R.string.google_connect_title),
+                subtitle = stringResource(R.string.google_connect_subtitle),
+                leadingIcon = { Icon(painterResource(R.drawable.ic_source_youtube_music), null, tint = MaterialTheme.colorScheme.secondary) },
+                onClick = { navController.navigateSafely(Screen.GoogleSignIn.route) },
+            ) else Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                SettingsItem(
+                    title = account.name,
+                    subtitle = account.handle.ifBlank { stringResource(R.string.google_connected_subtitle) },
+                    leadingIcon = {
+                        coil.compose.AsyncImage(account.photoUrl, null, Modifier.size(28.dp).clip(androidx.compose.foundation.shape.CircleShape))
+                    },
+                    onClick = { model.refreshYouTubeLibrary() },
+                )
+                SettingsItem(
+                    title = stringResource(R.string.google_disconnect_title),
+                    subtitle = stringResource(R.string.google_disconnect_subtitle),
+                    leadingIcon = { Icon(Icons.AutoMirrored.Rounded.Logout, null, tint = MaterialTheme.colorScheme.error) },
+                    onClick = { model.disconnectGoogle() },
+                )
+            }
+        }
     }
 }
 
@@ -574,6 +604,7 @@ private fun shelfName(shelf: fr.spotifeur.data.preferences.HomeShelf): String = 
     fr.spotifeur.data.preferences.HomeShelf.PLAYLISTS -> R.string.home_playlists
     fr.spotifeur.data.preferences.HomeShelf.MULTI_SERVICE -> R.string.home_multi_service
     fr.spotifeur.data.preferences.HomeShelf.SPOTIFY_PLAYLISTS -> R.string.home_spotify_playlists
+    fr.spotifeur.data.preferences.HomeShelf.YOUTUBE_PLAYLISTS -> R.string.home_youtube_playlists
     fr.spotifeur.data.preferences.HomeShelf.ALBUMS -> R.string.home_albums
     fr.spotifeur.data.preferences.HomeShelf.ARTISTS -> R.string.home_artists
     fr.spotifeur.data.preferences.HomeShelf.LOCAL_FILES -> R.string.home_local_files

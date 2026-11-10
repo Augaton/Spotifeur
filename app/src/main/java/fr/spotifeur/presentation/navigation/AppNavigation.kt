@@ -73,6 +73,14 @@ fun AppNavigation(
         ) { LibraryScreen(model, navController, paddingValues) }
         composable(Screen.Settings.route) { SettingsScreen(model, navController) }
         composable(Screen.History.route) { fr.spotifeur.presentation.screens.HistoryScreen(model, navController) }
+        composable(Screen.GoogleSignIn.route) { fr.spotifeur.presentation.screens.GoogleSignInScreen(model, navController) }
+        composable(
+            Screen.Convert.route,
+            arguments = listOf(navArgument("playlistId") { type = NavType.StringType }, navArgument("target") { type = NavType.StringType }),
+        ) { entry ->
+            val id = URLDecoder.decode(entry.arguments?.getString("playlistId").orEmpty(), "UTF-8")
+            fr.spotifeur.presentation.screens.ConvertScreen(model, navController, id, entry.arguments?.getString("target").orEmpty())
+        }
         composable(Screen.Equalizer.route) { EqualizerScreen(navController = navController, playerViewModel = model.ui) }
         composable(
             Screen.SettingsCategory.route,

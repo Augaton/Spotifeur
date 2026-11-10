@@ -22,6 +22,7 @@ import coil.compose.AsyncImage
 import fr.spotifeur.R
 import fr.spotifeur.SpotifeurModel
 import fr.spotifeur.data.Music
+import fr.spotifeur.data.PlaylistKind
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -45,7 +46,12 @@ internal fun SpotifyPlaylistEditor(
     val discovery by model.discovery.collectAsState()
     // Without a Spotify account, every new playlist is a multi-service playlist.
     val signedIn = discovery.spotifyEnabled
-    var local by remember { mutableStateOf(!signedIn) }
+    val google by model.youTubeAccount.collectAsState()
+    // A YouTube Music playlist only takes YouTube Music tracks.
+    val youTubeAllowed = playlist == null && google != null && (initialItem == null || initialItem.id.startsWith("ytm:"))
+    var destination by remember { mutableStateOf(if (signedIn) PlaylistKind.Spotify else PlaylistKind.MultiService) }
+    val local = destination == PlaylistKind.MultiService
+    val youTube = destination == PlaylistKind.YouTubeMusic
     var published by remember { mutableStateOf(false) }
     var knownVisibility by remember { mutableStateOf(playlist == null) }
     var image by remember { mutableStateOf<Uri?>(null) }
@@ -63,21 +69,24 @@ internal fun SpotifyPlaylistEditor(
         text = {
             Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 OutlinedTextField(name, { name = it.take(100) }, label = { Text(stringResource(R.string.playlist_name)) }, singleLine = true, enabled = !busy)
-                if (playlist == null && signedIn) {
+                val choices = buildList {
+                    if (signedIn) add(PlaylistKind.Spotify to R.string.spotify_playlist_account)
+                    if (youTubeAllowed) add(PlaylistKind.YouTubeMusic to R.string.youtube_playlist_account)
+                    add(PlaylistKind.MultiService to R.string.spotify_playlist_device)
+                }
+                if (playlist == null && choices.size > 1) choices.forEach { (kind, label) ->
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        RadioButton(!local, { if (!busy) local = false }, enabled = !busy)
-                        Text(stringResource(R.string.spotify_playlist_account), Modifier.clickable(enabled = !busy) { local = false })
-                    }
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        RadioButton(local, { if (!busy) local = true }, enabled = !busy)
-                        Text(stringResource(R.string.spotify_playlist_device), Modifier.clickable(enabled = !busy) { local = true })
+                        RadioButton(destination == kind, { if (!busy) destination = kind }, enabled = !busy)
+                        Text(stringResource(label), Modifier.clickable(enabled = !busy) { destination = kind })
                     }
                 }
-                if (image != null || playlist?.imageUrl != null) AsyncImage(image ?: playlist?.imageUrl, null, Modifier.size(100.dp))
-                OutlinedButton(onClick = { picker.launch("image/*") }, enabled = !busy) { Text(stringResource(R.string.spotify_playlist_cover)) }
+                if (!youTube) {
+                    if (image != null || playlist?.imageUrl != null) AsyncImage(image ?: playlist?.imageUrl, null, Modifier.size(100.dp))
+                    OutlinedButton(onClick = { picker.launch("image/*") }, enabled = !busy) { Text(stringResource(R.string.spotify_playlist_cover)) }
+                }
                 if (!local) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text(stringResource(R.string.spotify_playlist_profile), Modifier.weight(1f))
+                        Text(stringResource(if (youTube) R.string.youtube_playlist_public else R.string.spotify_playlist_profile), Modifier.weight(1f))
                         Switch(published, { published = it }, enabled = !busy && knownVisibility)
                     }
                 }
@@ -98,6 +107,8 @@ internal fun SpotifyPlaylistEditor(
                             if (tracks.isNotEmpty()) model.localPlaylistStore.add(created.id, tracks)
                             if (jpeg != null) model.setLocalPlaylistCover(created.id, jpeg)
                             onSaved(model.localPlaylistStore.get(created.id)?.asMusic() ?: created.asMusic()); onDismiss()
+                        } else if (youTube) {
+                            onSaved(model.createYouTubePlaylist(name, tracks, published)); onDismiss()
                         } else {
                             val created = if (playlist == null) model.createSpotifyPlaylist(name, tracks, published) else playlist.also {
                                 if (name.trim() != it.title) model.spotifyPlaylists.rename(it.id, name)
@@ -198,6 +209,50 @@ internal fun LocalPlaylistEditor(model: SpotifeurModel, playlist: Music, onDismi
                         }
                         onDismiss()
                     } catch (cancelled: CancellationException) { throw cancelled }
+                    catch (failure: Exception) { error = failure.message ?: saveFailure }
+                    finally { busy = false }
+                }
+            }) { Text(stringResource(R.string.action_save)) }
+        },
+        dismissButton = { TextButton(onClick = onDismiss, enabled = !busy) { Text(stringResource(R.string.action_cancel)) } },
+    )
+}
+
+/** Name and visibility of a playlist on the Google account. YouTube Music sets its cover from the tracks. */
+@Composable
+internal fun YouTubePlaylistEditor(model: SpotifeurModel, playlist: Music, onDismiss: () -> Unit) {
+    val scope = rememberCoroutineScope()
+    val saveFailure = stringResource(R.string.spotify_playlist_failed)
+    var name by remember { mutableStateOf(playlist.title) }
+    var public by remember { mutableStateOf(false) }
+    var known by remember { mutableStateOf(false) }
+    var busy by remember { mutableStateOf(false) }
+    var error by remember { mutableStateOf<String?>(null) }
+    LaunchedEffect(playlist.id) {
+        try { public = model.youTubePlaylistPublic(playlist); known = true }
+        catch (cancelled: CancellationException) { throw cancelled }
+        catch (failure: Exception) { error = failure.message ?: saveFailure }
+    }
+    AlertDialog(
+        onDismissRequest = { if (!busy) onDismiss() },
+        title = { Text(stringResource(R.string.youtube_playlist_edit)) },
+        text = {
+            Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                OutlinedTextField(name, { name = it.take(150) }, label = { Text(stringResource(R.string.playlist_name)) }, singleLine = true, enabled = !busy)
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(stringResource(R.string.youtube_playlist_public), Modifier.weight(1f))
+                    Switch(public, { public = it }, enabled = !busy && known)
+                }
+                error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
+                if (busy || !known && error == null) LinearProgressIndicator(Modifier.fillMaxWidth())
+            }
+        },
+        confirmButton = {
+            TextButton(enabled = !busy && known && name.isNotBlank(), onClick = {
+                busy = true; error = null
+                scope.launch {
+                    try { model.editYouTubePlaylist(playlist, name, public); onDismiss() }
+                    catch (cancelled: CancellationException) { throw cancelled }
                     catch (failure: Exception) { error = failure.message ?: saveFailure }
                     finally { busy = false }
                 }

@@ -6,7 +6,7 @@ import org.json.JSONObject
 /** The buttons of an album, artist or playlist page. */
 enum class DetailAction(val key: String) {
     DOWNLOAD("download"), ADD_TRACKS("add_tracks"), SAVE("save"), PIN("pin"), RADIO("radio"), SHARE("share"),
-    SORT("sort"), REORDER("reorder"), EDIT("edit"), EXPORT("export"), DELETE("delete"),
+    SORT("sort"), REORDER("reorder"), EDIT("edit"), EXPORT("export"), CONVERT("convert"), DELETE("delete"),
 }
 
 /** Which page a layout applies to. Artist pages use the album layout. */
@@ -18,7 +18,8 @@ enum class DetailPage(val actions: List<DetailAction>, val defaultShown: Set<Det
     PLAYLIST(
         listOf(
             DetailAction.DOWNLOAD, DetailAction.ADD_TRACKS, DetailAction.SAVE, DetailAction.PIN, DetailAction.SORT,
-            DetailAction.REORDER, DetailAction.EDIT, DetailAction.RADIO, DetailAction.SHARE, DetailAction.EXPORT, DetailAction.DELETE,
+            DetailAction.REORDER, DetailAction.EDIT, DetailAction.RADIO, DetailAction.SHARE, DetailAction.EXPORT, DetailAction.CONVERT,
+            DetailAction.DELETE,
         ),
         setOf(DetailAction.DOWNLOAD, DetailAction.ADD_TRACKS, DetailAction.SAVE, DetailAction.PIN),
     ),

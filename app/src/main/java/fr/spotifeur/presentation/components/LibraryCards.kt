@@ -806,6 +806,7 @@ fun PlaylistItem(
                         modifier = Modifier.weight(1f, fill = false)
                     )
                     if (playlist.id.startsWith("local:")) LocalBadge(Modifier.padding(start = 8.dp))
+                    if (playlist.id.startsWith("ytm:playlist:")) SourceBadge(fr.spotifeur.data.MusicSource.YouTubeMusic, Modifier.padding(start = 8.dp))
                 }
                 Text(
                     text = playlist.description.ifBlank { "Playlist" },

@@ -4,6 +4,22 @@
 
 Nothing yet.
 
+## v1.3.0
+
+### Added
+
+- Converter: playlist page → ⋮ → Convert to… turns a Spotify playlist (Liked songs included), a YouTube Music playlist or a multi-service playlist into one of the two other kinds. Tracks already from the destination are kept; the others are looked up on the destination (two Spotify searches or three YouTube Music searches at a time, YouTube Music videos only when no song is close) and scored like the YouTube Music matching of Spotify tracks: title 45 %, artists 35 %, duration 20 %, minus version words absent from the original. A score of 0.8 or more is a match, 0.55 to 0.8 is highlighted for review, below is left out. Each row opens the candidates, a search of the destination and a preview, and can be confirmed, replaced or left out. A device file converted to Spotify can stay as a `spotify:local:` reference. A track that appears twice is looked up once. Spotify playlists are created with their first 100 tracks, then completed in batches.
+- Google account for YouTube Music (Settings → Accounts). Google's sign-in page opens in a WebView with fresh cookies; once it lands on music.youtube.com, the cookies, `VISITOR_DATA` and `DATASYNC_ID` are checked with `account/account_menu`, then kept encrypted with an Android Keystore key and removed from the WebView. Disconnecting also deletes the playlist pages read with the account. Signed-in requests use the WEB_REMIX client with `Authorization: SAPISIDHASH`, `X-Goog-AuthUser: 0`, and `onBehalfOfUser` for brand accounts only; `Set-Cookie` rotations are written back. A 401 disconnects the account and says so.
+- YouTube Music playlists of the account in the library, the home Playlists shelf and an optional YouTube Music playlists shelf: `FEmusic_liked_playlists`, then each page read with the account (private playlists included) and kept on the device. The owner's playlists (editable header) can be renamed, made public or private, receive tracks from the add sheet or "Add to playlist", lose one row by its `playlistSetVideoId`, and be deleted; saved playlists can be removed from the library. New playlists can be created on the account. Audio of these tracks still goes through the anonymous `ytm://` path.
+
+### Changed
+
+- Settings → Spotify account is now Settings → Accounts, with Spotify and YouTube Music.
+
+### Fixed
+
+- The header of a multi-service playlist showed its track count twice ("30 tracks · 30 tracks"). It now shows the source name before the count; YouTube Music playlists without a known owner do the same.
+
 ## v1.2.5
 
 ### Fixed

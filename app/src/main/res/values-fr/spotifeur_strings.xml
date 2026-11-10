@@ -23,8 +23,6 @@
     <string name="action_save">Enregistrer</string>
     <string name="settings_storage_title">Stockage en cache</string>
     <string name="settings_storage_subtitle">Pochettes, paroles et téléchargements</string>
-    <string name="settings_account_title">Compte Spotify</string>
-    <string name="settings_account_subtitle">Session de cet appareil</string>
     <string name="settings_player_theme_album">Pochette</string>
     <string name="settings_player_theme_app">Thème de l’application</string>
     <string name="settings_carousel_none">Sans aperçu</string>
@@ -253,4 +251,54 @@
     <string name="history_clear_message">Supprime les écoutes enregistrées sur cet appareil. L’historique de Spotify n’est pas modifié.</string>
     <string name="history_clear_confirm">Effacer</string>
     <string name="login_optional">Facultatif</string>
+    <!-- Compte Google et playlists YouTube Music -->
+    <string name="action_ok">OK</string>
+    <string name="settings_accounts_title">Comptes</string>
+    <string name="google_connect_title">Connecter un compte Google</string>
+    <string name="google_connect_subtitle">Vos playlists YouTube Music dans Spotifeur, synchronisées avec le compte.</string>
+    <string name="google_connected_subtitle">Compte Google</string>
+    <string name="google_disconnect_title">Déconnecter le compte Google</string>
+    <string name="google_disconnect_subtitle">Retire la session de cet appareil. Vos playlists restent sur YouTube Music.</string>
+    <string name="google_signin_title">Compte Google</string>
+    <string name="google_signin_checking">Ouverture de YouTube Music…</string>
+    <string name="google_signin_failed">YouTube Music n’a pas ouvert de session avec ce compte.</string>
+    <string name="google_signin_retry">Réessayer</string>
+    <string name="google_session_closed">Google a fermé la session YouTube Music. Reconnectez le compte dans Réglages → Comptes.</string>
+    <string name="home_youtube_playlists">Playlists YouTube Music</string>
+    <string name="youtube_playlist_account">Sur mon compte YouTube Music</string>
+    <string name="youtube_playlist_public">Publique</string>
+    <string name="youtube_playlist_edit">Modifier la playlist YouTube Music</string>
+    <string name="youtube_playlist_failed">Cette playlist YouTube Music n’a pas pu être lue.</string>
+    <string name="youtube_playlist_only_youtube">Une playlist YouTube Music ne reçoit que des morceaux YouTube Music.</string>
+    <string name="youtube_playlist_row_gone">Ce morceau n’est plus dans la playlist.</string>
+    <string name="playlist_delete_youtube_confirm">Supprimer « %1$s » de votre compte YouTube Music ?</string>
+    <string name="playlist_remove_youtube_confirm">Retirer « %1$s » de votre bibliothèque YouTube Music ?</string>
+
+    <!-- Convertisseur -->
+    <string name="convert_to">Convertir vers…</string>
+    <string name="convert_title">Convertisseur</string>
+    <string name="convert_target_spotify">Nouvelle playlist sur votre compte Spotify</string>
+    <string name="convert_target_youtube">Nouvelle playlist sur votre compte YouTube Music</string>
+    <string name="convert_target_multi">Nouvelle playlist sur cet appareil, morceaux gardés tels quels</string>
+    <string name="convert_needs_spotify">Connectez-vous à Spotify dans Réglages → Comptes</string>
+    <string name="convert_needs_google">Connectez un compte Google dans Réglages → Comptes</string>
+    <string name="convert_reading">Lecture de la playlist…</string>
+    <string name="convert_read_failed">La playlist n’a pas pu être lue.</string>
+    <string name="convert_searching">Recherche des correspondances : %1$d sur %2$d</string>
+    <string name="convert_summary">%1$d morceaux sur %2$d seront ajoutés.</string>
+    <string name="convert_to_review">À vérifier (%1$d)</string>
+    <string name="convert_create">Créer la playlist · %1$s</string>
+    <string name="convert_failed">La playlist n’a pas pu être créée.</string>
+    <string name="convert_done">« %1$s » créée</string>
+    <string name="convert_row_searching">Recherche…</string>
+    <string name="convert_row_missing">Aucune correspondance</string>
+    <string name="convert_row_failed">La recherche a échoué</string>
+    <string name="convert_row_choose">Choisissez un morceau ou retirez-le</string>
+    <string name="convert_row_check">Vérifiez cette correspondance</string>
+    <string name="convert_remove">Retirer</string>
+    <string name="convert_restore">Remettre</string>
+    <string name="convert_keep_match">Garder cette correspondance</string>
+    <string name="convert_search_on">Rechercher sur %1$s</string>
+    <string name="convert_no_candidates">Aucun morceau trouvé.</string>
+    <string name="convert_listen">Écouter</string>
 </resources>

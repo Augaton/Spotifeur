@@ -124,7 +124,12 @@ fun DeletePlaylistDialog(model: SpotifeurModel, item: Music, onDismiss: () -> Un
         onDismissRequest = onDismiss,
         title = { Text(stringResource(R.string.playlist_delete)) },
         text = {
-            Text(stringResource(if (item.isLocalPlaylist) R.string.playlist_delete_confirm else R.string.playlist_delete_spotify_confirm, item.title))
+            Text(stringResource(when {
+                item.isLocalPlaylist -> R.string.playlist_delete_confirm
+                item.id.startsWith(fr.spotifeur.data.youtube.YTM_PLAYLIST_PREFIX) ->
+                    if (model.youTubePlaylistOwned(item)) R.string.playlist_delete_youtube_confirm else R.string.playlist_remove_youtube_confirm
+                else -> R.string.playlist_delete_spotify_confirm
+            }, item.title))
         },
         confirmButton = {
             TextButton(onClick = { onDismiss(); model.deletePlaylist(item); onConfirmed() }) { Text(stringResource(R.string.action_delete)) }

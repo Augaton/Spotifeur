@@ -59,16 +59,18 @@ import kotlinx.coroutines.launch
 fun AddTracksSheet(
     model: SpotifeurModel,
     playlist: Music,
-    spotifyPlaylist: Boolean,
+    target: fr.spotifeur.data.PlaylistKind,
     onAddLocal: (List<Music>) -> Unit,
-    onAddSpotify: suspend (List<Music>) -> Unit,
+    onAddRemote: suspend (List<Music>) -> Unit,
     onDismiss: () -> Unit,
 ) {
     val discovery by model.discovery.collectAsStateWithLifecycle()
+    // A Spotify playlist takes Spotify tracks and local files, a YouTube Music playlist only YouTube Music tracks.
+    val remote = target != fr.spotifeur.data.PlaylistKind.MultiService
     val sources = buildList {
-        if (discovery.spotifyEnabled) add(SpotifeurModel.TRACKS_SPOTIFY to R.string.search_source_spotify)
-        if (!spotifyPlaylist) add(SpotifeurModel.TRACKS_YOUTUBE to R.string.search_source_youtube)
-        add(SpotifeurModel.TRACKS_FILES to R.string.library_tab_local)
+        if (discovery.spotifyEnabled && target != fr.spotifeur.data.PlaylistKind.YouTubeMusic) add(SpotifeurModel.TRACKS_SPOTIFY to R.string.search_source_spotify)
+        if (target != fr.spotifeur.data.PlaylistKind.Spotify) add(SpotifeurModel.TRACKS_YOUTUBE to R.string.search_source_youtube)
+        if (target != fr.spotifeur.data.PlaylistKind.YouTubeMusic) add(SpotifeurModel.TRACKS_FILES to R.string.library_tab_local)
     }
     var source by remember { mutableStateOf(sources.first().first) }
     var query by remember { mutableStateOf("") }
@@ -123,11 +125,11 @@ fun AddTracksSheet(
                                 disabledContainerColor = MaterialTheme.colorScheme.primary, disabledContentColor = MaterialTheme.colorScheme.onPrimary,
                             ) else IconButtonDefaults.filledTonalIconButtonColors(),
                             onClick = {
-                                if (!spotifyPlaylist) { onAddLocal(listOf(track)); added = added + track.id }
+                                if (!remote) { onAddLocal(listOf(track)); added = added + track.id }
                                 else {
                                     adding = track.id
                                     scope.launch {
-                                        try { onAddSpotify(listOf(track)); added = added + track.id }
+                                        try { onAddRemote(listOf(track)); added = added + track.id }
                                         catch (cancelled: CancellationException) { throw cancelled }
                                         catch (failure: Exception) { model.showMessage(failure.message ?: failed) }
                                         finally { adding = null }

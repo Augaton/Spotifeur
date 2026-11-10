@@ -23,8 +23,6 @@
     <string name="action_save">Save</string>
     <string name="settings_storage_title">Cached storage</string>
     <string name="settings_storage_subtitle">Artwork, lyrics and downloads</string>
-    <string name="settings_account_title">Spotify account</string>
-    <string name="settings_account_subtitle">Session on this device</string>
     <string name="settings_player_theme_album">Album art</string>
     <string name="settings_player_theme_app">App theme</string>
     <string name="settings_carousel_none">No preview</string>
@@ -253,4 +251,54 @@
     <string name="history_clear_message">Removes the plays recorded on this device. Spotify\'s own history is not changed.</string>
     <string name="history_clear_confirm">Clear</string>
     <string name="login_optional">Optional</string>
+    <!-- Google account and YouTube Music playlists -->
+    <string name="action_ok">OK</string>
+    <string name="settings_accounts_title">Accounts</string>
+    <string name="google_connect_title">Connect a Google account</string>
+    <string name="google_connect_subtitle">Your YouTube Music playlists in Spotifeur, synced with the account.</string>
+    <string name="google_connected_subtitle">Google account</string>
+    <string name="google_disconnect_title">Disconnect the Google account</string>
+    <string name="google_disconnect_subtitle">Removes the session from this device. Your playlists stay on YouTube Music.</string>
+    <string name="google_signin_title">Google account</string>
+    <string name="google_signin_checking">Opening YouTube Music…</string>
+    <string name="google_signin_failed">YouTube Music did not open a session with this account.</string>
+    <string name="google_signin_retry">Try again</string>
+    <string name="google_session_closed">Google closed the YouTube Music session. Connect the account again in Settings → Accounts.</string>
+    <string name="home_youtube_playlists">YouTube Music playlists</string>
+    <string name="youtube_playlist_account">On my YouTube Music account</string>
+    <string name="youtube_playlist_public">Public</string>
+    <string name="youtube_playlist_edit">Edit YouTube Music playlist</string>
+    <string name="youtube_playlist_failed">This YouTube Music playlist could not be read.</string>
+    <string name="youtube_playlist_only_youtube">A YouTube Music playlist only takes YouTube Music tracks.</string>
+    <string name="youtube_playlist_row_gone">This track is no longer in the playlist.</string>
+    <string name="playlist_delete_youtube_confirm">Delete “%1$s” from your YouTube Music account?</string>
+    <string name="playlist_remove_youtube_confirm">Remove “%1$s” from your YouTube Music library?</string>
+
+    <!-- Converter -->
+    <string name="convert_to">Convert to…</string>
+    <string name="convert_title">Converter</string>
+    <string name="convert_target_spotify">New playlist on your Spotify account</string>
+    <string name="convert_target_youtube">New playlist on your YouTube Music account</string>
+    <string name="convert_target_multi">New playlist on this device, tracks kept as they are</string>
+    <string name="convert_needs_spotify">Sign in to Spotify in Settings → Accounts</string>
+    <string name="convert_needs_google">Connect a Google account in Settings → Accounts</string>
+    <string name="convert_reading">Reading the playlist…</string>
+    <string name="convert_read_failed">The playlist could not be read.</string>
+    <string name="convert_searching">Looking up tracks: %1$d of %2$d</string>
+    <string name="convert_summary">%1$d of %2$d tracks will be added.</string>
+    <string name="convert_to_review">To check (%1$d)</string>
+    <string name="convert_create">Create playlist · %1$s</string>
+    <string name="convert_failed">The playlist could not be created.</string>
+    <string name="convert_done">“%1$s” created</string>
+    <string name="convert_row_searching">Searching…</string>
+    <string name="convert_row_missing">No match found</string>
+    <string name="convert_row_failed">The search failed</string>
+    <string name="convert_row_choose">Choose a track or leave it out</string>
+    <string name="convert_row_check">Check this match</string>
+    <string name="convert_remove">Leave out</string>
+    <string name="convert_restore">Put back</string>
+    <string name="convert_keep_match">Keep this match</string>
+    <string name="convert_search_on">Search on %1$s</string>
+    <string name="convert_no_candidates">No track found.</string>
+    <string name="convert_listen">Listen</string>
 </resources>

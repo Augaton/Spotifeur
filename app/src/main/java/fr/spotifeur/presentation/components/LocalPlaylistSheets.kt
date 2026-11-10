@@ -102,6 +102,11 @@ fun AddToLocalPlaylistSheet(item: Music, ui: PlayerViewModel, onDismiss: () -> U
     // Local files are added as Spotify's own local file references.
     val spotifyItem = item.kind != fr.spotifeur.data.MusicKind.Track || item.source != fr.spotifeur.data.MusicSource.YouTubeMusic
     val accountPlaylists = library.content?.playlists.orEmpty().filter { spotifyItem && username != null && it.ownerUsername == username }
+    // A YouTube Music playlist of the Google account takes YouTube Music tracks and playlists.
+    val youTubeEditable by ui.model.youTubeEditable.collectAsStateWithLifecycle()
+    val youTubeAll by ui.model.youTubePlaylists.collectAsStateWithLifecycle()
+    val youTubeItem = item.id.startsWith("ytm:")
+    val youTubePlaylists = if (!youTubeItem) emptyList() else youTubeAll.filter { it.id != item.id && (it.id in youTubeEditable || ui.model.youTubePlaylistOwned(it)) }
     var creating by remember { mutableStateOf(false) }
     ModalBottomSheet(onDismissRequest = onDismiss, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
         Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp).navigationBarsPadding()) {
@@ -138,6 +143,24 @@ fun AddToLocalPlaylistSheet(item: Music, ui: PlayerViewModel, onDismiss: () -> U
                             targetSize = SmartImageCompactListTargetSize, modifier = Modifier.size(44.dp))
                         Text(playlist.title, Modifier.weight(1f).padding(horizontal = 12.dp), maxLines = 1, overflow = TextOverflow.Ellipsis)
                         Text("Spotify", style = MaterialTheme.typography.labelSmall)
+                    }
+                }
+                items(youTubePlaylists, key = { it.id }) { playlist ->
+                    Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).clickable(enabled = !adding) {
+                        adding = true
+                        scope.launch {
+                            try {
+                                ui.model.addYouTubePlaylistTracks(playlist, ui.model.tracksOf(item))
+                                ui.model.showMessage(addedMessage); onDismiss()
+                            } catch (cancelled: CancellationException) { throw cancelled }
+                            catch (failure: Exception) { ui.model.showMessage(failure.message.orEmpty()) }
+                            finally { adding = false }
+                        }
+                    }.padding(10.dp), verticalAlignment = Alignment.CenterVertically) {
+                        SmartImage(model = playlist.imageUrl, contentDescription = null, shape = RoundedCornerShape(12.dp),
+                            targetSize = SmartImageCompactListTargetSize, modifier = Modifier.size(44.dp))
+                        Text(playlist.title, Modifier.weight(1f).padding(horizontal = 12.dp), maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        Text("YouTube Music", style = MaterialTheme.typography.labelSmall)
                     }
                 }
                 items(playlists, key = { it.id }) { playlist ->

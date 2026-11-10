@@ -116,6 +116,7 @@ fun HomeScreen(model: SpotifeurModel, navController: NavHostController, paddingV
     val downloadsTitle = stringResource(R.string.home_downloads)
     val settings by ui.settings.collectAsStateWithLifecycle()
     val localPlaylists by model.localPlaylists.collectAsStateWithLifecycle()
+    val youTubePlaylists by model.youTubePlaylists.collectAsStateWithLifecycle()
     val localBadge = stringResource(R.string.badge_local)
     val playlistsTitle = stringResource(R.string.home_playlists)
     val albumsTitle = stringResource(R.string.home_albums)
@@ -127,6 +128,7 @@ fun HomeScreen(model: SpotifeurModel, navController: NavHostController, paddingV
         HomeShelf.RECENT to stringResource(R.string.home_recent),
         HomeShelf.MULTI_SERVICE to stringResource(R.string.home_multi_service),
         HomeShelf.SPOTIFY_PLAYLISTS to stringResource(R.string.home_spotify_playlists),
+        HomeShelf.YOUTUBE_PLAYLISTS to stringResource(R.string.home_youtube_playlists),
         HomeShelf.LOCAL_FILES to stringResource(R.string.home_local_files),
     )
     val library by model.library.collectAsStateWithLifecycle()
@@ -213,9 +215,10 @@ fun HomeScreen(model: SpotifeurModel, navController: NavHostController, paddingV
                             HomeShelf.RECENT -> recent to null
                             HomeShelf.DOWNLOADS -> downloads.values.filter { it.isComplete }.map { it.collection.item } to openTab(fr.spotifeur.data.model.LibraryTabId.DOWNLOADS)
                             HomeShelf.LIKED -> emptyList<Music>() to null
-                            HomeShelf.PLAYLISTS -> (multi + content?.playlists.orEmpty()) to openTab(fr.spotifeur.data.model.LibraryTabId.PLAYLISTS)
+                            HomeShelf.PLAYLISTS -> (multi + youTubePlaylists + content?.playlists.orEmpty()) to openTab(fr.spotifeur.data.model.LibraryTabId.PLAYLISTS)
                             HomeShelf.MULTI_SERVICE -> multi to openTab(fr.spotifeur.data.model.LibraryTabId.PLAYLISTS)
                             HomeShelf.SPOTIFY_PLAYLISTS -> content?.playlists.orEmpty() to openTab(fr.spotifeur.data.model.LibraryTabId.PLAYLISTS)
+                            HomeShelf.YOUTUBE_PLAYLISTS -> youTubePlaylists to openTab(fr.spotifeur.data.model.LibraryTabId.PLAYLISTS)
                             HomeShelf.ALBUMS -> content?.albums.orEmpty() to openTab(fr.spotifeur.data.model.LibraryTabId.ALBUMS)
                             HomeShelf.ARTISTS -> content?.artists.orEmpty() to openTab(fr.spotifeur.data.model.LibraryTabId.ARTISTS)
                             HomeShelf.LOCAL_FILES -> localFiles to openTab(fr.spotifeur.data.model.LibraryTabId.LOCAL)

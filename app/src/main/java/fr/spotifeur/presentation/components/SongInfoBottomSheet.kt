@@ -398,8 +398,9 @@ fun EntityOptionsSheet(
                 val discovery by playerViewModel.model.discovery.collectAsStateWithLifecycle()
                 val export = rememberPlaylistCsvExport(playerViewModel.model)
                 var deleting by remember { mutableStateOf(false) }
+                val youTubePlaylists by playerViewModel.model.youTubePlaylists.collectAsStateWithLifecycle()
                 val inLibrary = item.isLocalPlaylist || (discovery.spotifyEnabled && item.id.startsWith("spotify:playlist:") &&
-                    library.content?.playlists?.any { it.id == item.id } == true)
+                    library.content?.playlists?.any { it.id == item.id } == true) || youTubePlaylists.any { it.id == item.id }
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                     FilledTonalButton(
                         onClick = { export(item) },

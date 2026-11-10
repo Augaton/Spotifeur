@@ -36,6 +36,14 @@ Spotifeur is for music only. Those items are filtered out of search, pages and t
 
 Yes. Saved tracks, albums, followed artists and playlists use the same services as the official app. Pins are the exception: they stay on the device.
 
+## Can I use my YouTube Music playlists?
+
+Yes. Connect a Google account in Settings → Accounts: your YouTube Music playlists appear in the library and stay synced with the account, and new playlists can be created there. The YouTube Music catalog still plays without an account.
+
+## Can I move a playlist from Spotify to YouTube Music?
+
+Yes. On the playlist's page, ⋮ → Convert to…, then choose Spotify, YouTube Music or a multi-service playlist. Spotifeur looks up each track on the destination, highlights the matches it is not sure of, and lets you change or leave out any track before creating the playlist.
+
 ## How does offline playback work?
 
 Download an album, a playlist or a track from its page. Recently played and upcoming tracks are also kept in a cache you can size in Settings → Cached storage. Audio stays encrypted on the device. The offline mode switch stops all network access from the app.

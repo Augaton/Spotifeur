@@ -8,6 +8,7 @@ Spotifeur has no server, no analytics, no crash reporting and no advertising SDK
 | --- | --- | --- |
 | Spotify (`*.spotify.com`, `*.scdn.co`, Spotify CDNs) | The same requests as the official Android app: device description for the client token, sign-in, library, catalog, playlists, audio | To use your Spotify account |
 | YouTube (`music.youtube.com`, `www.youtube.com`, `*.googlevideo.com`) | Search text, playlist and video ids, an anonymous visitor identifier issued by YouTube; for a Spotify track played without a Spotify account, its title and artist | YouTube Music search, playlists and audio, without a Google account |
+| YouTube Music with a Google account (`accounts.google.com`, `music.youtube.com`) | Google's sign-in page, shown in the app. Then the account's cookies with each library and playlist request: list of playlists, their tracks, creation, renaming, visibility, added and removed tracks, deletion | Your YouTube Music playlists, only if you connect an account |
 | Spotify embed page (`open.spotify.com`) | A playlist id | Import a Spotify playlist without a Spotify account |
 | [LRCLIB](https://lrclib.net) | Title, artist, album and duration of a track | Lyrics when Spotify has none. Turn off in Settings → LRCLIB fallback. |
 
@@ -18,11 +19,12 @@ Your Spotify credentials are only sent to Spotify's login service. Audio CDNs ne
 ## What stays on the device
 
 - The session credential, encrypted with an Android Keystore key.
+- The Google account's cookies, if one is connected, encrypted with another Android Keystore key, with its name and picture.
 - The library, pages, artwork and lyrics cache.
 - Downloaded and cached audio as delivered: encrypted for Spotify, plain for YouTube Music.
-- Settings, pins, multi-service playlists, YouTube Music matches of Spotify tracks and search history.
+- Settings, pins, multi-service playlists, the list of YouTube Music playlists of the connected account, YouTube Music matches of Spotify tracks and search history.
 
-Sign out (Settings → Spotify account) erases the credential and stops playback. Clearing the app's data erases everything.
+Sign out (Settings → Accounts) erases the Spotify credential and stops playback. Disconnecting the Google account (Settings → Accounts) erases its cookies, the app's web cookies and the playlist pages read with it; the playlists stay on YouTube Music. Clearing the app's data erases everything.
 
 ## Permissions
 

@@ -21,6 +21,8 @@ import androidx.compose.material.icons.outlined.PushPin
 import androidx.compose.material.icons.rounded.Radio
 import androidx.compose.material.icons.rounded.Share
 import androidx.compose.material.icons.rounded.SwapVert
+import androidx.compose.material.icons.rounded.SwapHoriz
+import fr.spotifeur.presentation.navigation.navigateSafely
 import fr.spotifeur.data.preferences.DetailAction
 import fr.spotifeur.data.preferences.DetailPage
 import fr.spotifeur.presentation.utils.shareMusic
@@ -106,6 +108,14 @@ fun PlaylistDetailScreen(model: SpotifeurModel, navController: NavHostController
     val isPinned = pins.any { it.id == playlistId }
     val isLiked = playlistId == ui.likedSongs.id
     val isLocalList = playlistId.startsWith(LOCAL_PLAYLIST_PREFIX)
+    val isYouTubeList = playlistId.startsWith(fr.spotifeur.data.youtube.YTM_PLAYLIST_PREFIX)
+    val google by model.youTubeAccount.collectAsStateWithLifecycle()
+    val youTubeEditable by model.youTubeEditable.collectAsStateWithLifecycle()
+    val youTubePlaylists by model.youTubePlaylists.collectAsStateWithLifecycle()
+    // The Google account's own playlist: its page showed the editing header, or the library names the account as its owner.
+    val ownsYouTube = isYouTubeList && google != null && (playlistId in youTubeEditable || model.youTubePlaylistOwned(current))
+    val inYouTubeLibrary = isYouTubeList && google != null && youTubePlaylists.any { it.id == playlistId }
+    val playlistKind = fr.spotifeur.data.playlistKindOf(current)
     val library by model.library.collectAsStateWithLifecycle()
     val inSpotifyLibrary = discovery.spotifyEnabled && library.content?.playlists?.any { it.id == playlistId } == true
     val scope = rememberCoroutineScope()
@@ -117,7 +127,7 @@ fun PlaylistDetailScreen(model: SpotifeurModel, navController: NavHostController
     var addingSuggestion by remember { mutableStateOf<String?>(null) }
     var suggestionRevision by remember { mutableStateOf(0) }
     LaunchedEffect(playlistId, current.ownerUsername, online) {
-        if (!isLocalList && !isLiked && online) {
+        if (!isLocalList && !isYouTubeList && !isLiked && online) {
             isOwned = runCatching {
                 current.ownerUsername?.let { it == SpotifyAccount.require(context).username() } ?: model.spotifyPlaylists.isOwned(playlistId)
             }.getOrDefault(false)
@@ -138,6 +148,7 @@ fun PlaylistDetailScreen(model: SpotifeurModel, navController: NavHostController
     var reordering by remember(playlistId) { mutableStateOf(false) }
     var addingTracks by remember { mutableStateOf(false) }
     var deleting by remember { mutableStateOf(false) }
+    var converting by remember { mutableStateOf(false) }
     var selectedIndex by remember { mutableStateOf(-1) }
     var selected by remember { mutableStateOf<Song?>(null) }
     val listState = rememberLazyListState()
@@ -151,12 +162,15 @@ fun PlaylistDetailScreen(model: SpotifeurModel, navController: NavHostController
     // Removes the row shown at a position of the displayed (possibly sorted) list.
     val removeAt: ((Int) -> Unit)? = when {
         isLocalList -> { index -> ordered.getOrNull(index)?.let { model.localPlaylistStore.removeAt(playlistId, it.first) } }
-        isOwned && !isLiked && online -> { index ->
+        (isOwned && !isLiked || ownsYouTube) && online -> { index ->
             ordered.getOrNull(index)?.let { (position, _) ->
                 if (!removing) {
                     removing = true
                     scope.launch {
-                        try { model.removeSpotifyPlaylistTrack(current, position) }
+                        try {
+                            if (isYouTubeList) model.removeYouTubePlaylistTrack(current, position)
+                            else model.removeSpotifyPlaylistTrack(current, position)
+                        }
                         catch (cancelled: CancellationException) { throw cancelled }
                         catch (failure: Exception) { model.showMessage(failure.message.orEmpty()) }
                         finally { removing = false }
@@ -182,18 +196,24 @@ fun PlaylistDetailScreen(model: SpotifeurModel, navController: NavHostController
             .collect { last -> if (content?.nextPage != null && last >= songs.size - 12) model.loadDetail(item, more = true) }
     }
 
+    // Multi-service and YouTube Music pages carry the track count as their subtitle; the header adds it already.
+    val sourceName = when {
+        isLocalList -> stringResource(R.string.badge_local)
+        isYouTubeList -> stringResource(R.string.search_source_youtube)
+        else -> null
+    }
     CollectionDetailLayout(
-        current.copy(subtitle = current.ownerUsername ?: current.subtitle),
+        current.copy(subtitle = current.ownerUsername ?: sourceName ?: current.subtitle),
         content?.total ?: songs.size, ui, navController, listState,
     ) {
         item(key = "playlist_actions") {
             val shareContext = LocalContext.current
-            val editable = isLocalList || isOwned
+            val editable = isLocalList || isOwned || ownsYouTube
             val actions = buildList {
                 add(downloadAction(ui, current))
                 if (editable) add(ActionSpec(DetailAction.ADD_TRACKS, Icons.Rounded.Add, stringResource(R.string.playlist_add_tracks),
                     { addingTracks = true }, enabled = isLocalList || online))
-                if (!isLocalList && !isLiked && discovery.spotifyEnabled) add(ActionSpec(DetailAction.SAVE,
+                if (!isLocalList && !isYouTubeList && !isLiked && discovery.spotifyEnabled) add(ActionSpec(DetailAction.SAVE,
                     if (playlistId in saved) Icons.Rounded.Favorite else Icons.Rounded.FavoriteBorder,
                     stringResource(if (playlistId in saved) R.string.saved_remove else R.string.saved_add), { model.toggleFavorite(current) },
                     selected = playlistId in saved))
@@ -205,13 +225,15 @@ fun PlaylistDetailScreen(model: SpotifeurModel, navController: NavHostController
                     selected = reordering))
                 if (editable) add(ActionSpec(DetailAction.EDIT, Icons.Rounded.Edit, stringResource(R.string.detail_edit), { renaming = true },
                     enabled = isLocalList || online))
-                if (!isLocalList && discovery.spotifyEnabled) add(ActionSpec(DetailAction.RADIO, Icons.Rounded.Radio, stringResource(R.string.radio_related),
+                if (!isLocalList && !isYouTubeList && discovery.spotifyEnabled) add(ActionSpec(DetailAction.RADIO, Icons.Rounded.Radio, stringResource(R.string.radio_related),
                     { ui.startRadio(current) { navController.openMusic(ui, it) } }))
                 if (current.spotifyShareUrl() != null) add(ActionSpec(DetailAction.SHARE, Icons.Rounded.Share, stringResource(R.string.detail_share),
                     { shareContext.shareMusic(current) }))
                 add(ActionSpec(DetailAction.EXPORT, Icons.Rounded.TableChart, stringResource(R.string.playlist_export_csv), { exportCsv(current) },
                     enabled = content != null))
-                if (isLocalList || (inSpotifyLibrary && !isLiked)) add(ActionSpec(DetailAction.DELETE, Icons.Rounded.Delete,
+                if (playlistKind != null) add(ActionSpec(DetailAction.CONVERT, Icons.Rounded.SwapHoriz, stringResource(R.string.convert_to),
+                    { converting = true }, enabled = content != null && !content.tracks.isEmpty()))
+                if (isLocalList || (inSpotifyLibrary && !isLiked) || inYouTubeLibrary) add(ActionSpec(DetailAction.DELETE, Icons.Rounded.Delete,
                     stringResource(R.string.playlist_delete), { deleting = true }, destructive = true))
             }
             DetailActionBar(DetailPage.PLAYLIST, actions, ui)
@@ -306,10 +328,19 @@ fun PlaylistDetailScreen(model: SpotifeurModel, navController: NavHostController
         onRemoveFromPlaylist = removeAt?.let { remove -> { remove(selectedIndex) } },
     ) { selected = null }
     if (renaming && isOwned) SpotifyPlaylistEditor(model, playlist = current, onDismiss = { renaming = false })
-    if (addingTracks) fr.spotifeur.presentation.components.AddTracksSheet(model, current, spotifyPlaylist = !isLocalList,
+    if (addingTracks) fr.spotifeur.presentation.components.AddTracksSheet(model, current,
+        target = playlistKind ?: fr.spotifeur.data.PlaylistKind.MultiService,
         onAddLocal = { tracks -> model.localPlaylistStore.add(playlistId, tracks) },
-        onAddSpotify = { tracks -> model.addSpotifyPlaylistTracks(current, tracks) },
+        onAddRemote = { tracks ->
+            if (isYouTubeList) model.addYouTubePlaylistTracks(current, tracks) else model.addSpotifyPlaylistTracks(current, tracks)
+        },
         onDismiss = { addingTracks = false })
+    if (renaming && ownsYouTube) fr.spotifeur.presentation.components.YouTubePlaylistEditor(model, current) { renaming = false }
+    if (converting) ConvertTargetSheet(model, current, onDismiss = { converting = false }) { kind ->
+        converting = false
+        ui.register(current)
+        navController.navigateSafely(fr.spotifeur.presentation.navigation.Screen.Convert.createRoute(playlistId, kind.key))
+    }
     if (renaming && isLocalList) fr.spotifeur.presentation.components.LocalPlaylistEditor(model, current) { renaming = false }
     if (deleting) fr.spotifeur.presentation.components.DeletePlaylistDialog(model, current, onDismiss = { deleting = false }) {
         navController.popBackStack()
