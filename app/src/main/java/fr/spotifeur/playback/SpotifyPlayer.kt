@@ -121,7 +121,8 @@ class SpotifyPlayer(
     private fun mixLater(context: List<Music>) {
         mixJob?.cancel()
         val source = recommend ?: return
-        if (!ShuffleMemory.enabled || context.isEmpty()) return
+        // Off, signed out or offline, smart shuffle starts nothing: no coroutine, no request, and its code is never loaded.
+        if (!ShuffleMemory.enabled || context.isEmpty() || !smartShuffleOn()) return
         mixJob = scope.launch {
             val picks = try { source(context) }
             catch (cancelled: CancellationException) { throw cancelled }
@@ -132,7 +133,8 @@ class SpotifyPlayer(
     /** The current item stays, so its audio keeps playing; the user's queue stays right after it. */
     private fun mix(picks: List<Music>) { controller?.let { player ->
         val valid = picks.filter(Music::isPlayableTrack)
-        if (valid.isEmpty() || !ShuffleMemory.enabled || player.mediaItemCount == 0) return
+        // Checked again: the setting or the network may have changed during the search.
+        if (valid.isEmpty() || !ShuffleMemory.enabled || !smartShuffleOn() || player.mediaItemCount == 0) return
         val queued = userQueue(player)
         val window = (0 until player.mediaItemCount).map { music(player.getMediaItemAt(it)) }
         val local = player.currentMediaItemIndex
@@ -141,6 +143,8 @@ class SpotifyPlayer(
         queueChanged = true
         update(player)
     } }
+    private fun smartShuffleOn() = fr.spotifeur.data.preferences.SettingsStore.get(appContext).settings.value.smartShuffle &&
+        fr.spotifeur.data.SpotifyAccount.signedIn && fr.spotifeur.data.NetworkMonitor.online.value
     private fun windowStart(start: Int) = (start - WINDOW_BEHIND).coerceAtLeast(0)
     /** The part of [tracks] the player holds when [start] plays, and what stays out before and after it. */
     private fun window(tracks: List<Music>, start: Int): Triple<List<Music>, List<Music>, List<Music>> {

@@ -793,10 +793,9 @@ class SpotifeurModel(private val app: Application) : AndroidViewModel(app) {
     internal suspend fun playlistSuggestions(playlist: Music, tracks: List<Music>): List<Music> =
         spotifyPlaylists.recommendations(playlist.id, tracks, mutableLibrary.value.content?.savedTracks.orEmpty())
 
-    /** Smart shuffle, when the setting is on, a Spotify account is signed in and the app is online. */
+    /** Smart shuffle picks for [context]. The player only asks while the setting is on, signed in and online. */
     private suspend fun smartShuffle(context: List<Music>): List<Music> {
         val source = catalog ?: return emptyList()
-        if (!fr.spotifeur.data.preferences.SettingsStore.get(app).settings.value.smartShuffle || !NetworkMonitor.online.value) return emptyList()
         val saved = mutableLibrary.value.content?.savedTrackUris.orEmpty()
         return withContext(Dispatchers.Default) {
             val excluded = saved.toHashSet().apply { context.mapTo(this, Music::id) }
