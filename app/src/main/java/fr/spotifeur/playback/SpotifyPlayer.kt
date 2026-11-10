@@ -88,6 +88,8 @@ class SpotifyPlayer(
     private var before: List<Music> = emptyList()
     private var after: List<Music> = emptyList()
     private var mixJob: Job? = null
+    /** IDs of the tracks smart shuffle added to the current context, to take them out again. */
+    private var recommended: Set<String> = emptySet()
     init {
         ShuffleMemory.load(appContext)
         future.addListener({
@@ -109,6 +111,7 @@ class SpotifyPlayer(
         val start = if (ShuffleMemory.enabled) 0 else first
         mutableState.value = Playback(window(tracks, start).first, start - windowStart(start), buffering = true,
             durationMs = selected.durationMs, shuffle = ShuffleMemory.enabled, canNext = start < tracks.lastIndex)
+        recommended = emptySet()
         mixLater(tracks)
         if (controller == null) { pending = tracks to start; return }
         load(tracks, start)
@@ -126,7 +129,11 @@ class SpotifyPlayer(
         mixJob = scope.launch {
             val picks = try { source(context) }
             catch (cancelled: CancellationException) { throw cancelled }
-            catch (failure: Exception) { timber.log.Timber.tag("SpotifeurShuffle").w("Smart shuffle unavailable: %s", failure.message); return@launch }
+            catch (failure: Exception) {
+                fr.spotifeur.data.diagnostics.DiagnosticLog.record("smart-shuffle", "${failure.javaClass.simpleName} \"${failure.message}\"")
+                return@launch
+            }
+            if (picks.isEmpty()) fr.spotifeur.data.diagnostics.DiagnosticLog.record("smart-shuffle", "no recommendation for ${context.size} tracks")
             mix(picks)
         }
     }
@@ -140,6 +147,25 @@ class SpotifyPlayer(
         val local = player.currentMediaItemIndex
         val later = spreadRecommendations(window.drop(local + 1 + queued.size) + after, valid)
         replaceAroundCurrent(player, before + window.take(local), later, queued)
+        recommended = recommended + valid.map(Music::id)
+        queueChanged = true
+        update(player)
+    } }
+    /**
+     * Long press on shuffle, once the setting has changed. On: shuffle turns on if needed and the
+     * search starts now. Off: the search stops and the recommendations leave the queue, except the
+     * one playing, which finishes.
+     */
+    fun smartShuffleChanged(on: Boolean) { controller?.let { player ->
+        if (on) { if (ShuffleMemory.enabled) mixLater(context().first) else shuffle(); return }
+        mixJob?.cancel()
+        if (recommended.isEmpty() || player.mediaItemCount == 0) return
+        val queued = userQueue(player)
+        val window = (0 until player.mediaItemCount).map { music(player.getMediaItemAt(it)) }
+        val local = player.currentMediaItemIndex
+        fun own(tracks: List<Music>) = tracks.filterNot { it.id in recommended }
+        replaceAroundCurrent(player, own(before + window.take(local)), own(window.drop(local + 1 + queued.size) + after), queued)
+        recommended = emptySet()
         queueChanged = true
         update(player)
     } }
@@ -255,6 +281,7 @@ class SpotifyPlayer(
                 }
             }
         }
+        if (!ShuffleMemory.enabled) recommended = emptySet()
         queueChanged = true
         mixLater(items)
         update(player)
