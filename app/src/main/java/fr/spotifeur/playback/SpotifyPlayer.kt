@@ -126,7 +126,7 @@ class SpotifyPlayer(
         mixJob = scope.launch {
             val picks = try { source(context) }
             catch (cancelled: CancellationException) { throw cancelled }
-            catch (failure: Exception) { android.util.Log.w("SpotifeurShuffle", "Smart shuffle unavailable: ${failure.message}"); return@launch }
+            catch (failure: Exception) { timber.log.Timber.tag("SpotifeurShuffle").w("Smart shuffle unavailable: %s", failure.message); return@launch }
             mix(picks)
         }
     }
