@@ -40,6 +40,8 @@ import androidx.navigation.NavHostController
 import fr.spotifeur.R
 import fr.spotifeur.SpotifeurModel
 import fr.spotifeur.data.youtube.cookieValue
+import fr.spotifeur.data.youtube.isYouTubeHome
+import fr.spotifeur.data.youtube.isYouTubeMusic
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
 import org.json.JSONObject
@@ -99,16 +101,24 @@ fun GoogleSignInScreen(model: SpotifeurModel, navController: NavHostController) 
             AndroidView(
                 modifier = Modifier.fillMaxSize(),
                 factory = { context ->
+                    var musicRedirects = 0
                     WebView(context).apply {
                         settings.javaScriptEnabled = true
                         settings.domStorageEnabled = true
                         CookieManager.getInstance().setAcceptCookie(true)
                         webViewClient = object : WebViewClient() {
                             override fun onPageFinished(view: WebView, url: String?) {
-                                if (url?.startsWith(MUSIC_ORIGIN) != true) return
+                                val music = isYouTubeMusic(url)
+                                if (!music && !isYouTubeHome(url)) return
                                 val cookie = CookieManager.getInstance().getCookie(MUSIC_ORIGIN) ?: return
                                 if (cookieValue(cookie, "SAPISID") == null && cookieValue(cookie, "__Secure-3PAPISID") == null) return
-                                finish(view, cookie)
+                                if (music) finish(view, cookie)
+                                // Signed in, but left on YouTube's home page: go on to YouTube Music. At most
+                                // twice, so that a redirection back to the home page can never loop.
+                                else if (musicRedirects++ < 2) {
+                                    fr.spotifeur.data.diagnostics.DiagnosticLog.record("youtube-account", "sign-in ended on YouTube's home page, opening YouTube Music")
+                                    view.loadUrl(MUSIC_ORIGIN)
+                                }
                             }
                         }
                         // A clean start: no other account's session is reused.

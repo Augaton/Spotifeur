@@ -2,7 +2,9 @@
 
 ## Unreleased
 
-Nothing yet.
+### Fixed
+
+- Connecting a Google account (Settings → Accounts) could stop on YouTube's home page and never import the playlists ([#4](https://github.com/jean-voila/Spotifeur/issues/4)). Google sometimes ends the sign-in on www.youtube.com or m.youtube.com instead of following `next` to YouTube Music, for instance in the mobile WebView or after the consent page. Once the session cookies are set, the sign-in screen now opens YouTube Music itself, at most twice. The landing page is also checked by its exact host, so a look-alike host such as `music.youtube.com.example.org` can no longer end the sign-in.
 
 ## v1.3.0
 

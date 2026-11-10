@@ -4,6 +4,8 @@ import fr.spotifeur.data.youtube.YTM_PLAYLIST_PREFIX
 import fr.spotifeur.data.youtube.cookieValue
 import fr.spotifeur.data.youtube.delegatedPageId
 import fr.spotifeur.data.youtube.isEditablePlaylist
+import fr.spotifeur.data.youtube.isYouTubeHome
+import fr.spotifeur.data.youtube.isYouTubeMusic
 import fr.spotifeur.data.youtube.mergeCookies
 import fr.spotifeur.data.youtube.parseAccountMenu
 import fr.spotifeur.data.youtube.parseLibraryPlaylists
@@ -36,6 +38,23 @@ class YouTubeAccountTest {
         assertEquals("main", cookieValue(cookie, "SAPISID"))
         assertEquals("three", cookieValue(cookie, "__Secure-3PAPISID"))
         assertNull(cookieValue(cookie, "SID"))
+    }
+
+    @Test fun signInPagesAreRecognizedByExactHost() {
+        assertTrue(isYouTubeMusic("https://music.youtube.com/"))
+        assertTrue(isYouTubeMusic("https://music.youtube.com/library?x=1"))
+        assertFalse(isYouTubeMusic("https://music.youtube.com.example.org/"))
+        assertFalse(isYouTubeMusic("http://music.youtube.com/"))
+        assertTrue(isYouTubeHome("https://www.youtube.com/"))
+        assertTrue(isYouTubeHome("https://m.youtube.com/?persist_app=1"))
+        assertTrue(isYouTubeHome("https://YouTube.com"))
+        // The sign-in handler, the consent page and other YouTube pages are left alone.
+        assertFalse(isYouTubeHome("https://www.youtube.com/signin?action_handle_signin=true"))
+        assertFalse(isYouTubeHome("https://consent.youtube.com/ml?continue=x"))
+        assertFalse(isYouTubeHome("https://www.youtube.com/watch?v=x"))
+        assertFalse(isYouTubeHome("https://www.youtube.com.example.org/"))
+        assertFalse(isYouTubeHome("not a url"))
+        assertFalse(isYouTubeHome(null))
     }
 
     @Test fun setCookieReplacesAndExpires() {
